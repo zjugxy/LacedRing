@@ -48,15 +48,31 @@ namespace glfwviewer {
         ctptr = &ct;
         SceneRenderCT temp;
         //load scenerenderct
+
         glGenVertexArrays(1, &temp.VAO);
         //glGenBuffers(1, &ctobj.facecolorVBO);
         glGenBuffers(1, &temp.vertexVBO);
         glGenBuffers(1, &temp.EBO);
         glGenBuffers(1, &temp.facecolorVBO);
         glGenBuffers(1, &temp.lineEBO);
+
+
+
         temp.needrender = true;
         temp.ringneedrender = true;
         ctobj = temp;
+
+        glActiveTexture(GL_TEXTURE0);
+        glGenTextures(1, &ctobj.texture);
+        glBindTexture(GL_TEXTURE_1D, ctobj.texture);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_R32I, ctptr->facerightleftwithcolor.size(),
+            0, GL_RED_INTEGER, GL_INT,ctptr->facerightleftwithcolor.data() );
+
+
+
         return;
     }
 
@@ -68,6 +84,15 @@ namespace glfwviewer {
         glGenBuffers(1, &temp.VBO);
         glGenBuffers(1, &temp.EBO);
         lrobj = temp;
+
+        glActiveTexture(GL_TEXTURE1);
+        glGenTextures(1, &lrobj.texture);
+        glBindTexture(GL_TEXTURE_1D, lrobj.texture);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        //glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_R32I, lrptr->facetypeid.size(),
+            0, GL_RED_INTEGER, GL_INT, lrptr->facetypeid.data());
         return;
     }
 
@@ -108,6 +133,9 @@ namespace glfwviewer {
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctobj.EBO);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,ctptr->Vtable.size()*sizeof(int), ctptr->Vtable.data(), GL_DYNAMIC_DRAW);
+
+            //glBindTexture(GL_TEXTURE_1D, ctobj.texture);
+
 
             glDrawElements(GL_TRIANGLES, ctptr->Vtable.size(), GL_UNSIGNED_INT, 0);
 

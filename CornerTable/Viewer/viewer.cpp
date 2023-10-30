@@ -203,10 +203,13 @@ namespace glfwviewer {
 
 		//unsigned int uniformfaceblock = glGetUniformBlockIndex(m_shader.ID, "faceidtocolor");
 		//glUniformBlockBinding(m_shader.ID, uniformfaceblock, 0);
-		if(enabletyperender==false)
-			m_shader.setArrayInt("faceidtocolor", m_scene->ctptr->facerightleftwithcolor);
-		else
-			m_shader.setArrayInt("faceidtocolor", m_scene->ctptr->RenderTriType);
+		//if(enabletyperender==false)
+		//	m_shader.setArrayInt("faceidtocolor", m_scene->ctptr->facerightleftwithcolor);
+		//else
+		//	m_shader.setArrayInt("faceidtocolor", m_scene->ctptr->RenderTriType);
+
+		m_shader.setInt("tex0", 0);
+		m_shader.setBool("UseCT", true);
 
 		m_scene->renderCT();
 
@@ -226,7 +229,10 @@ namespace glfwviewer {
 		m_shader.setMat4("projection", m_camera.projMatrix());
 		m_shader.setMat4("view", m_camera.viewMatrix());
 		m_shader.setMat4("model", model);
-		m_shader.setArrayInt("faceidtocolor", m_scene->lrptr->facetypeid);
+		//m_shader.setArrayInt("faceidtocolor", m_scene->lrptr->facetypeid);
+		m_shader.setBool("UseCT", false);
+		m_shader.setInt("tex1", 1);
+
 		m_scene->renderLR();
 
 	}

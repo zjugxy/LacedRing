@@ -57,7 +57,7 @@ namespace glfwviewer {
 		GLuint VAO;
 		GLuint facecolorVBO;//uniform?
 		bool needrender = true;
-
+		unsigned int texture;
 		GLuint lineEBO;
 		bool ringneedrender = true;
 
@@ -67,6 +67,9 @@ namespace glfwviewer {
 		GLuint VAO;
 		GLuint VBO;
 		GLuint EBO;
+		unsigned int texture;
+
+
 	};
 
 	class Scene

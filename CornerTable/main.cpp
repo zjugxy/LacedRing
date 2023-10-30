@@ -16,7 +16,7 @@ int main()
     // generate vertices
     try
     {
-        if (!OpenMesh::IO::read_mesh(mesh, "sphere.obj"))
+        if (!OpenMesh::IO::read_mesh(mesh, "bunnysimple.obj"))
         {
             std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
             return 1;
@@ -78,8 +78,8 @@ int main()
             //true时渲染triangle classification
             // 
              
-           myview.RenderuseLR();
-           //myview.Renderct(false);
+            myview.RenderuseLR();
+            //myview.Renderct(false);
             myview.Renderring();
 
 

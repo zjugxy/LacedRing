@@ -77,14 +77,14 @@ CornerTable::CornerTable(MyMesh input)
 		}
 	}
 
-	//ct information print
-	for (const auto& face : input.faces()) {
-		std::cout << "face id" << face.idx()<<std::endl;
-		for (const auto& he : face.halfedges()) {
-			int corneridx = cornerindex[he];
-			std::cout << "corner index: " << corneridx << " opp: " << Otable[corneridx] << " vertex: " << Vtable[corneridx] << std::endl;
-		}
-	}
+	////ct information print
+	//for (const auto& face : input.faces()) {
+	//	std::cout << "face id" << face.idx()<<std::endl;
+	//	for (const auto& he : face.halfedges()) {
+	//		int corneridx = cornerindex[he];
+	//		std::cout << "corner index: " << corneridx << " opp: " << Otable[corneridx] << " vertex: " << Vtable[corneridx] << std::endl;
+	//	}
+	//}
 
 }
 
@@ -164,7 +164,6 @@ void CornerTable::HamiltonianCycle(int start)
 			Mvertex[Vertex(corner)] = Mtri[Tri(corner)] = 1;
 			vercnt++;
 			tricnt++;
-
 			listcorner1.push_back(corner);
 
 		}
@@ -378,6 +377,7 @@ void CornerTable::AdjustTritype_AdjecentT0(int triidx) {
 		triangletypes[triidx] = TypeTri::T1_irregular;
 	else if (triangletypes[triidx] == TypeTri::T2)
 		triangletypes[triidx] = TypeTri::T2_irregular;
-	else if (triangletypes[triidx] == TypeTri::T0) 
-		std::cout << "have to check whether isolate point exist" << std::endl;
+	else if (triangletypes[triidx] == TypeTri::T0) {
+		;
+	}
 }
