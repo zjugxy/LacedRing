@@ -1,16 +1,8 @@
-#ÕâÀïÃæÓÐÒ»¸öºÜ¿ÓµùµÄµØ·½£¬¾ÍÊÇgeometryshaderÖÐµÄfaceidtocolorÖÐµÄÊý×é´óÐ¡ÐèÒªÊÖ¶¯ÉèÖÃ¡£¡£¡£
-#ÎÒÌ«²ËÁË
+
+é—®é¢˜
+#1.æœ‰è¾¹ç•Œçš„meshç›®å‰è¿˜æ²¡æœ‰å¤„ç†
+
+#2.å¯ä»¥ä¼˜åŒ–çš„ç‚¹ï¼Œdraw lineæ—¶å¯ä»¥ä½¿å¾—é¡¶ç‚¹å¾€normalæ–¹å‘å¢žé•¿ä¸€äº›
 
 
-ÎÊÌâ
-#1.ÓÐ±ß½çµÄmeshÄ¿Ç°»¹Ã»ÓÐ´¦Àí
-
-#2.¿ÉÒÔÓÅ»¯µÄµã£¬draw lineÊ±¿ÉÒÔÊ¹µÃ¶¥µãÍùnormal·½ÏòÔö³¤Ò»Ð©
-
-#3.ÎÒÔÚ½øÐÐ¹þÃÜ¸ü±éÀúmeshÊ±£¬ÊÕ¼¯µÄcornerµÄ·½·¨´¿´âÐþÑ§£¬ÎªÊ²Ã´work£¬»»Ò»¸ö±éÀú·½·¨»¹workÂð£¿
-
-#4.corner table ÊÇÔõÃ´²éÑ¯V.cµÄ
-
-
-#ÈçºÎ´¦Àí±ß½çÇé¿ö£¿£¿£¿
 
