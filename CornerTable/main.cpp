@@ -79,8 +79,8 @@ int main()
             // 
              
             //myview.RenderuseLR();
-            myview.Renderct(false);
-            myview.Renderring();
+            //myview.Renderct(false);
+            //myview.Renderring();
 
 
             glfwSwapBuffers(myview.MYwindow());
