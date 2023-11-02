@@ -167,7 +167,7 @@ namespace glfwviewer {
             temp.push_back(temp.front());
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ctobj.lineEBO);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, temp.size() * sizeof(int), temp.data(), GL_DYNAMIC_DRAW);
-            glLineWidth(5.0f);
+            glLineWidth(1.0f);
             glDrawElements(GL_LINE_STRIP, temp.size(), GL_UNSIGNED_INT, 0);
 
         }
