@@ -1,20 +1,14 @@
-#ÕâÀïÃæÓÐÒ»¸öºÜ¿ÓµùµÄµØ·½£¬¾ÍÊÇgeometryshaderÖÐµÄfaceidtocolorÖÐµÄÊý×é´óÐ¡ÐèÒªÊÖ¶¯ÉèÖÃ¡£¡£¡£
-#ÎÒÌ«²ËÁË
+
+é—®é¢˜
 
 
-ÎÊÌâ
-
-
-#2.¿ÉÒÔÓÅ»¯µÄµã£¬draw lineÊ±¿ÉÒÔÊ¹µÃ¶¥µãÍùnormal·½ÏòÔö³¤Ò»Ð©
-
-#3.ÎÒÔÚ½øÐÐ¹þÃÜ¸ü±éÀúmeshÊ±£¬ÊÕ¼¯µÄcornerµÄ·½·¨´¿´âÐþÑ§£¬ÎªÊ²Ã´work£¬»»Ò»¸ö±éÀú·½·¨»¹workÂð£¿
+#2.å¯ä»¥ä¼˜åŒ–çš„ç‚¹ï¼Œdraw lineæ—¶å¯ä»¥ä½¿å¾—é¡¶ç‚¹å¾€normalæ–¹å‘å¢žé•¿ä¸€äº›
 
 
 
-#ÈçºÎ´¦Àí±ß½çÇé¿ö£¿£¿£¿
 
 
-#wtbunnyÎª²âÊÔÄ£ÐÍ
+#wtbunnyä¸ºæµ‹è¯•æ¨¡åž‹
 
-#ÃæÊýÌØ±ð´óµÄÄ£ÐÍÎÞ·¨äÖÈ¾³öÏëÒªµÄÑÕÉ«
+#é¢æ•°ç‰¹åˆ«å¤§çš„æ¨¡åž‹æ— æ³•æ¸²æŸ“å‡ºæƒ³è¦çš„é¢œè‰²
 
