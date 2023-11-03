@@ -1,6 +1,6 @@
 #include<memory>
 #include "scene.h"
-
+#include<random>
 namespace glfwviewer {
     Scene::Scene():ctptr(nullptr)
     {
@@ -96,30 +96,39 @@ namespace glfwviewer {
         return;
     }
 
-    //void Scene::renderobjs() {
-    //    for (auto& obj : renlist)
-    //        if (obj.needrender) {
-    //            obj.ptr->Generate_Rendata();
-    //            glBindVertexArray(obj.VAO);
-
-    //            glBindBuffer(GL_ARRAY_BUFFER, obj.vertexVBO);
-    //            glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * obj.ptr->renderdata.points.size(), obj.ptr->renderdata.points.data(), GL_DYNAMIC_DRAW);
-    //            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    //            glEnableVertexAttribArray(0);
+    void Scene::LoadMeshlet(MyMesh mesh, std::vector<std::vector<int>> meshlets)
+    {
 
 
-    //            glBindBuffer(GL_ARRAY_BUFFER, obj.normalVBO);
-    //            glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * obj.ptr->renderdata.normals.size(), obj.ptr->renderdata.normals.data(), GL_DYNAMIC_DRAW);
-    //            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    //            glEnableVertexAttribArray(1);
 
-    //            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj.EBO);
-    //            glBufferData(GL_ELEMENT_ARRAY_BUFFER, obj.ptr->renderdata.faces.size() * sizeof(int), obj.ptr->renderdata.faces.data(), GL_DYNAMIC_DRAW);
-    //            //绘制
-    //            glDrawElements(GL_TRIANGLES, obj.ptr->renderdata.faces.size(), GL_UNSIGNED_INT, 0);
-    //        }
+        for (auto& vertex : mesh.vertices()) {
+            auto pnt = mesh.point(vertex);
+            mlobj.vertices.emplace_back(pnt[0], pnt[1], pnt[2]);
+        }
+        for (auto& face : mesh.faces()) {
+            for (const auto& ver : face.vertices()) {
+                mlobj.indexs.push_back(ver.idx());
+            }
+        }
 
-    //}
+        mlobj.meshptr = &mesh;
+        glGenVertexArrays(1, &mlobj.VAO);
+        glGenBuffers(1, &mlobj.VBO);
+        glGenBuffers(1, &mlobj.EBO);
+
+        glActiveTexture(GL_TEXTURE2);
+        glGenTextures(1, &mlobj.texture);
+        glBindTexture(GL_TEXTURE_1D, mlobj.texture);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+
+
+        // 绑定颜色数组到纹理对象
+        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, color.size(), 0, GL_RGB, GL_UNSIGNED_BYTE, color.data());
+
+    }
+
 
     void Scene::renderCT() {
 
@@ -140,6 +149,20 @@ namespace glfwviewer {
             glDrawElements(GL_TRIANGLES, ctptr->Vtable.size(), GL_UNSIGNED_INT, 0);
 
         }
+    }
+
+    void Scene::renderML() {
+        glBindVertexArray(mlobj.VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, mlobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * mlobj.vertices.size(), mlobj.vertices.data(), GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlobj.EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mlobj.indexs.size()*sizeof(uint), mlobj.indexs.data(), GL_DYNAMIC_DRAW);
+
+        glDrawElements(GL_TRIANGLES, mlobj.indexs.size(), GL_UNSIGNED_INT, 0);
     }
 
     void Scene::renderLR() {

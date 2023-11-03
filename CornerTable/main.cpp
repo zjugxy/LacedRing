@@ -3,7 +3,8 @@
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include <Eigen/Dense>
-
+#include"Viewer/scene.h"
+#include"Viewer/viewer.h"
 #include"ClusteringALgotithm.h"
 int main()
 {
@@ -12,7 +13,7 @@ int main()
     // generate vertices
     try
     {
-        if (!OpenMesh::IO::read_mesh(mesh, "E:/OpenMesh/wtbunny.obj"))
+        if (!OpenMesh::IO::read_mesh(mesh, "E:/OpenMesh/sphere.obj"))
         {
             std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
             return 1;
@@ -31,7 +32,29 @@ int main()
     ClusteringAlgorithm clu;
     auto meshlets = clu.Cluster(mesh, 0.02);
 
-    //通过渲染验证对不对
+
+    //渲染hamiltoniancycle环，需要设置geometryshader中的faceidtocolor数组大小
+    {
+        glfwviewer::Viewer myview;
+        myview.initGLFW();
+        glfwviewer::Scene myscene;
+        myscene.LoadMeshlet(mesh, meshlets);
+
+        myview.set(&myscene);
+        myview.setshader("vertexshader.glsl", "fragshader.glsl", "geometryshader.glsl");
+
+        while (!glfwWindowShouldClose(myview.MYwindow()))
+        {
+            myview.processinput();
+            //myview.RenderuseLR();
+            myview.RenderML();
+
+            glfwSwapBuffers(myview.MYwindow());
+            glfwPollEvents();
+        }
+        glfwTerminate();
+        exit(EXIT_SUCCESS);
+    }
 
 
 

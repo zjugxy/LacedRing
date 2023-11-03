@@ -72,6 +72,16 @@ namespace glfwviewer {
 
 	};
 
+	struct SceneRenderMeshlet {
+		MyMesh* meshptr;
+		std::vector<vec3> vertices;
+		std::vector<uint> indexs;
+		GLuint VAO;
+		GLuint VBO;
+		GLuint EBO;
+		unsigned int texture;
+	};
+
 	class Scene
 	{
 	public:
@@ -83,6 +93,8 @@ namespace glfwviewer {
 
 		const MyLR* lrptr;
 		SceneRenderLR lrobj;
+
+		SceneRenderMeshlet mlobj;
 		
 		std::vector<SceneRenderobj> renlist;
 
@@ -95,7 +107,9 @@ namespace glfwviewer {
 
 		void LoadCornerTable(const CornerTable& ct);
 		void LoadLR(const MyLR& lr);
+		void LoadMeshlet(MyMesh mesh, std::vector<std::vector<int>> meshlets);
 
+		void renderML();
 		void renderCT();
 		void renderCTring();
 		void renderLR();

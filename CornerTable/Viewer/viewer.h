@@ -42,7 +42,7 @@ namespace glfwviewer {
 		virtual void printhelp(char* text[]);
 		virtual void Renderct(bool enabletyperender = false);
 		virtual void RenderuseLR();
-
+		virtual void RenderML();
 		virtual void Renderring();
 
 		//input func below
