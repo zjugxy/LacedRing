@@ -45,6 +45,9 @@
     <ClCompile Include="MyLR.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="ClusteringALgotithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CornerTable.h">
@@ -66,6 +69,9 @@
       <Filter>头文件\Viewer</Filter>
     </ClInclude>
     <ClInclude Include="MyLR.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ClusteringALgotithm.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

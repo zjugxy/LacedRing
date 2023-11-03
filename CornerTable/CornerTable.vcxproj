@@ -117,7 +117,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\OpenMesh\OpenMesh-9.0.0\src;E:\OpenMesh\CornerTable\CornerTable\CornerTable\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\OpenMesh\OpenMesh-9.0.0\src;E:\OpenMesh\CornerTable\CornerTable\CornerTable\inc;C:\Program Files\Packages\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ClusteringALgotithm.cpp" />
     <ClCompile Include="CornerTable.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
@@ -152,6 +153,7 @@
     <ClCompile Include="Viewer\viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ClusteringALgotithm.h" />
     <ClInclude Include="CornerTable.h" />
     <ClInclude Include="MyLR.h" />
     <ClInclude Include="Shader.h" />
