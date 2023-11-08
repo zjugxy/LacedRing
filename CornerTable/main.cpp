@@ -6,6 +6,7 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"Viewer/scene.h"
 #include"Viewer/viewer.h"
 #include"ClusteringALgotithm.h"
+
 int main()
 {
     MyMesh mesh;
@@ -31,6 +32,13 @@ int main()
 
     ClusteringAlgorithm clu;
     auto meshlets = clu.Cluster(mesh, 0.02);
+    int dd = 0;
+    for (const auto& meshlet : meshlets) {
+        dd += meshlet.size();
+    }
+    std::cout << "total face in meshlets " << dd << std::endl;
+    std::cout << "total face in mesh" << mesh.n_faces() << std::endl;
+    //
 
 
     //渲染hamiltoniancycle环，需要设置geometryshader中的faceidtocolor数组大小
@@ -38,10 +46,12 @@ int main()
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
-        myscene.LoadMeshlet(mesh, meshlets);
+        myscene.LoadTSMeshlet(mesh, meshlets);
+
+        //需要写一个check环节查看meshlet内部的face以及其相应的geoinfo是不是对的
 
         myview.set(&myscene);
-        myview.setshader("vertexshader.glsl", "fragshader.glsl", "geometryshader.glsl");
+        myview.setMeshshader("TSmeshshader.glsl", "TSfragshader.glsl");
 
         while (!glfwWindowShouldClose(myview.MYwindow()))
         {

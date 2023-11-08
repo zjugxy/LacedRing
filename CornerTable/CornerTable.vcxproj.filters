@@ -48,6 +48,9 @@
     <ClCompile Include="ClusteringALgotithm.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="meshletloader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CornerTable.h">
@@ -74,6 +77,12 @@
     <ClInclude Include="ClusteringALgotithm.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Meshlet.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MShader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="fragshader.glsl">
@@ -89,6 +98,12 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="ringfrag.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="TSmeshshader.glsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="TSfragshader.glsl">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

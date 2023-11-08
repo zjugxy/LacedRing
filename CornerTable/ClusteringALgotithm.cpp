@@ -1,7 +1,7 @@
 #include "ClusteringALgotithm.h"
 #include <queue>
 #include <algorithm>
-#define MAXFACENUMINMESHLET 16
+#define MAXFACENUMINMESHLET 32
 
 
 DualNodeType::DualNodeType(int f, const Eigen::Matrix3d& A, const Eigen::Vector3d& b, double c) : A(A), b(b), c(c) {

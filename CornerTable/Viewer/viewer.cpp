@@ -48,9 +48,10 @@ namespace glfwviewer {
 			exit(EXIT_FAILURE);
 		}
 
+
 		glfwWindowHint(GLFW_DEPTH_BITS, 16);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 
@@ -72,6 +73,11 @@ namespace glfwviewer {
 		}
 		glfwSwapInterval(1);
 		m_window = window;
+
+#ifndef GL_NV_mesh_shader
+		std::cout << "error in not support mesh shader" << std::endl;
+#endif // GL_NV_mesh_shader
+
 
 		static Viewer* v = this;
 		//call back function of glfw
@@ -103,6 +109,11 @@ namespace glfwviewer {
 	GLFWwindow* Viewer::MYwindow() const
 	{
 		return m_window;
+	}
+
+	void Viewer::setMeshshader(const char* mesh, const char* frag)
+	{
+		m_meshshader = MShader(mesh, frag);
 	}
 
 	void Viewer::mousecallback(GLFWwindow* window, double x, double y) {
@@ -241,24 +252,20 @@ namespace glfwviewer {
 	{
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		m_shader.use();
+		m_meshshader.use();
 
-		m_shader.setVec3("viewPos", m_camera.center());
-		m_shader.setVec3("lightPos", m_light.lightpos);
-		m_shader.setVec3("lightColor", m_light.lightcolor);
+		m_meshshader.setVec3("viewPos", m_camera.center());
+		m_meshshader.setVec3("lightPos", m_light.lightpos);
+		m_meshshader.setVec3("lightColor", m_light.lightcolor);
 
 		glm::mat4 model = glm::mat4(1.0f);
 		//model = glm::translate(model, vec3(0.2, 0.2, 0.0));
-		m_shader.setMat4("projection", m_camera.projMatrix());
-		m_shader.setMat4("view", m_camera.viewMatrix());
-		m_shader.setMat4("model", model);
+		m_meshshader.setMat4("projection", m_camera.projMatrix());
+		m_meshshader.setMat4("view", m_camera.viewMatrix());
+		m_meshshader.setMat4("model", model);
 		//m_shader.setArrayInt("faceidtocolor", m_scene->lrptr->facetypeid);
-		m_shader.setBool("UseCT", false);
-		m_shader.setInt("tex2", 2);
 
-		m_shader.setInt("n_face", m_scene->mlobj.meshptr->n_faces());
-
-		m_scene->renderML();
+		m_scene->renderTSML();
 	}
 
 	void Viewer::Renderring()

@@ -13,6 +13,8 @@ uniform bool UseCT;
 
 in vec3 vFragPos[3];
 
+
+
 out vec3 Normal;
 out vec3 FragPos;
 out vec3 basecolor;

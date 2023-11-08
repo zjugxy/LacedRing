@@ -1,4 +1,4 @@
-#include<memory>
+ï»¿#include<memory>
 #include "scene.h"
 #include<random>
 namespace glfwviewer {
@@ -21,7 +21,7 @@ namespace glfwviewer {
 
     void Scene::LoadCornerTable(const CornerTable& ct)
     {
-        //¸üÐÂmmbox mmsphere
+        //æ›´æ–°mmbox mmsphere
         BoundingBox box;
 
         if (ct.vertices.empty()) {
@@ -96,37 +96,23 @@ namespace glfwviewer {
         return;
     }
 
-    void Scene::LoadMeshlet(MyMesh mesh, std::vector<std::vector<int>> meshlets)
+    void Scene::LoadTSMeshlet(MyMesh mesh, Meshlets meshlets)
     {
+        MeshletLoad(tsobj.tsmeshlets, mesh, meshlets, tsobj.tsgeoinfo);
 
+        //å¸ƒå±€æœ‰é—®é¢˜
+        tsobj.tsmeshlets[0].color = vec3(1.0f, 1.0f, 0.2f);
+        glGenBuffers(1, &tsobj.tsgeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, tsobj.tsgeo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, tsobj.tsgeoinfo.size() * sizeof(vec3), tsobj.tsgeoinfo.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, tsobj.tsgeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-
-        for (auto& vertex : mesh.vertices()) {
-            auto pnt = mesh.point(vertex);
-            mlobj.vertices.emplace_back(pnt[0], pnt[1], pnt[2]);
-        }
-        for (auto& face : mesh.faces()) {
-            for (const auto& ver : face.vertices()) {
-                mlobj.indexs.push_back(ver.idx());
-            }
-        }
-
-        mlobj.meshptr = &mesh;
-        glGenVertexArrays(1, &mlobj.VAO);
-        glGenBuffers(1, &mlobj.VBO);
-        glGenBuffers(1, &mlobj.EBO);
-
-        glActiveTexture(GL_TEXTURE2);
-        glGenTextures(1, &mlobj.texture);
-        glBindTexture(GL_TEXTURE_1D, mlobj.texture);
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-
-
-        // °ó¶¨ÑÕÉ«Êý×éµ½ÎÆÀí¶ÔÏó
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, color.size(), 0, GL_RGB, GL_UNSIGNED_BYTE, color.data());
-
+        glGenBuffers(1, &tsobj.tsmeshdes);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, tsobj.tsmeshdes);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, tsobj.tsmeshlets.size() * sizeof(TS_meshlet), tsobj.tsmeshlets.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, tsobj.tsmeshdes);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
 
@@ -152,17 +138,7 @@ namespace glfwviewer {
     }
 
     void Scene::renderML() {
-        glBindVertexArray(mlobj.VAO);
 
-        glBindBuffer(GL_ARRAY_BUFFER, mlobj.VBO);
-        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * mlobj.vertices.size(), mlobj.vertices.data(), GL_DYNAMIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlobj.EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mlobj.indexs.size()*sizeof(uint), mlobj.indexs.data(), GL_DYNAMIC_DRAW);
-
-        glDrawElements(GL_TRIANGLES, mlobj.indexs.size(), GL_UNSIGNED_INT, 0);
     }
 
     void Scene::renderLR() {
@@ -178,6 +154,13 @@ namespace glfwviewer {
 
         glDrawElements(GL_TRIANGLES, lrptr->EBO_check.size(), GL_UNSIGNED_INT, 0);
     }
+
+    void Scene::renderTSML()
+    {
+        glDrawMeshTasksNV(0, tsobj.tsmeshlets.size());
+    }
+
+
 
     void Scene::renderCTring()
     {

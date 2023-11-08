@@ -147,6 +147,7 @@
     <ClCompile Include="CornerTable.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="meshletloader.cpp" />
     <ClCompile Include="MyLR.cpp" />
     <ClCompile Include="Viewer\camera.cpp" />
     <ClCompile Include="Viewer\scene.cpp" />
@@ -155,6 +156,8 @@
   <ItemGroup>
     <ClInclude Include="ClusteringALgotithm.h" />
     <ClInclude Include="CornerTable.h" />
+    <ClInclude Include="Meshlet.h" />
+    <ClInclude Include="MShader.h" />
     <ClInclude Include="MyLR.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Viewer\camera.h" />
@@ -167,6 +170,8 @@
     <None Include="geometryshader.glsl" />
     <None Include="ringfrag.glsl" />
     <None Include="ringvertex.glsl" />
+    <None Include="TSfragshader.glsl" />
+    <None Include="TSmeshshader.glsl" />
     <None Include="vertexshader.glsl" />
   </ItemGroup>
   <ItemGroup>

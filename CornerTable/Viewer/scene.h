@@ -6,7 +6,7 @@
 #include "viewermath.h"
 #include"../CornerTable.h"
 #include"../MyLR.h"
-
+#include"../Meshlet.h"
 namespace glfwviewer {
 
 	class BoundingSphere
@@ -82,6 +82,14 @@ namespace glfwviewer {
 		unsigned int texture;
 	};
 
+	struct SceneRenderTS {
+		std::vector<TS_meshlet> tsmeshlets;
+		std::vector<vec3> tsgeoinfo;
+		GLuint tsgeo;
+		GLuint tsmeshdes;
+	};
+
+
 	class Scene
 	{
 	public:
@@ -90,13 +98,12 @@ namespace glfwviewer {
 		GLuint VAO;
 		SceneRenderCT ctobj;
 		const CornerTable* ctptr;
-
 		const MyLR* lrptr;
 		SceneRenderLR lrobj;
-
 		SceneRenderMeshlet mlobj;
-		
 		std::vector<SceneRenderobj> renlist;
+
+		SceneRenderTS tsobj;
 
 	public:
 		Scene();
@@ -107,13 +114,17 @@ namespace glfwviewer {
 
 		void LoadCornerTable(const CornerTable& ct);
 		void LoadLR(const MyLR& lr);
-		void LoadMeshlet(MyMesh mesh, std::vector<std::vector<int>> meshlets);
 
 		void renderML();
 		void renderCT();
 		void renderCTring();
 		void renderLR();
+		void renderTSML();
 		//void renderobjs();
+
+
+		//meshlet load
+		void LoadTSMeshlet(MyMesh mesh, Meshlets meshlets);
 	};
 
 }

@@ -4,7 +4,7 @@
 #include "viewermath.h"
 #include "camera.h"
 #include "../Shader.h"
-
+#include"../MShader.h"
 namespace glfwviewer {
 
 
@@ -67,7 +67,7 @@ namespace glfwviewer {
 		virtual void setshader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr) {
 			m_shader = Shader(vertexPath, fragmentPath, geometryPath);
 		}
-
+		virtual void setMeshshader(const char* mesh, const char* frag);
 		virtual void setringshader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr) {
 			ring_shader = Shader(vertexPath, fragmentPath, geometryPath);
 		}
@@ -85,7 +85,7 @@ namespace glfwviewer {
 		Shader m_shader;
 		Shader ring_shader;
 		Shader LR_shader;
-
+		MShader m_meshshader;
 		bool firstMouse = true;
 		bool sign_view = false;
 
