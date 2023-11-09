@@ -10,9 +10,11 @@ struct TS_meshlet
 {
 	uint vertex_begin;
 	uint primitive_cnt;//cnt *3
+	uint useless1;
+	uint useless2;
 	//range from    [vertex_begin,vertex_begin+primitive_cnt*3)
-	vec3 color;
+	vec4 color; // add one useless color float to fit std140
 };
 
-void MeshletLoad(std::vector<TS_meshlet>& loader, MyMesh mesh, Meshlets meshlets,std::vector<vec3>& geoinfo);
+void TS_MeshletLoad(std::vector<TS_meshlet>& loader, MyMesh mesh, Meshlets meshlets,std::vector<vec4>& geoinfo);
 

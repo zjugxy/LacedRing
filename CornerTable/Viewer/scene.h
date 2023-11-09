@@ -84,7 +84,7 @@ namespace glfwviewer {
 
 	struct SceneRenderTS {
 		std::vector<TS_meshlet> tsmeshlets;
-		std::vector<vec3> tsgeoinfo;
+		std::vector<vec4> tsgeoinfo;
 		GLuint tsgeo;
 		GLuint tsmeshdes;
 	};

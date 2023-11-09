@@ -2,7 +2,7 @@
 #include<random>
 
 //TS
-void MeshletLoad(std::vector<TS_meshlet>& loader, MyMesh mesh, Meshlets meshlets,std::vector<vec3>& geometryinfo) {
+void TS_MeshletLoad(std::vector<TS_meshlet>& loader, MyMesh mesh, Meshlets meshlets,std::vector<vec4>& geometryinfo) {
 
 	// 使用随机设备作为种子
 	std::random_device rd;
@@ -25,13 +25,13 @@ void MeshletLoad(std::vector<TS_meshlet>& loader, MyMesh mesh, Meshlets meshlets
 			for (MyMesh::FaceVertexIter fv_it = mesh.fv_iter(fh); fv_it.is_valid(); ++fv_it) {
 				auto vh = *fv_it;
 				auto pnt = mesh.point(vh);
-				geometryinfo.emplace_back(pnt[0], pnt[1], pnt[2]);
+				geometryinfo.emplace_back(pnt[0], pnt[1], pnt[2],1.0f);
 				++cnt;
 			}
 		}
 		//单个meshlet遍历完成
 		temp.primitive_cnt = pricnt;
-		temp.color = vec3(dis(gen), dis(gen), dis(gen));
+		temp.color = vec4(dis(gen), dis(gen), dis(gen),1.0f);
 		loader.push_back(temp);
 	}
 

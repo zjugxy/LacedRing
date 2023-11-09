@@ -19,3 +19,22 @@ will be used in cluster culling algorithms.
 https://github.com/zeux/meshoptimizer#mesh-shading
 
 可以研究一下不同种类meshlet对渲染和压缩的影响。
+
+
+
+
+# version TS_meshlet
+
+1.add cluster algorithm
+
+2.add meshlet.h and load std::vector<std::vector<int>> meshlets into MeshletDes;
+
+3.use ssbo load the infomation of vertices and meshletdes
+
+4.use gl_drawmeshtasknv(first,workgroupnum) launch meshshader
+
+
+note:
+
+the maxvertices and maxprimitive should be set carefully. if not strange error occurs.
+

@@ -98,21 +98,27 @@ namespace glfwviewer {
 
     void Scene::LoadTSMeshlet(MyMesh mesh, Meshlets meshlets)
     {
-        MeshletLoad(tsobj.tsmeshlets, mesh, meshlets, tsobj.tsgeoinfo);
+        TS_MeshletLoad(tsobj.tsmeshlets, mesh, meshlets, tsobj.tsgeoinfo);
 
         //布局有问题
-        tsobj.tsmeshlets[0].color = vec3(1.0f, 1.0f, 0.2f);
+        tsobj.tsmeshlets[0].color = vec4(1.0f, 1.0f, 0.0f,1.0f);
         glGenBuffers(1, &tsobj.tsgeo);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, tsobj.tsgeo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, tsobj.tsgeoinfo.size() * sizeof(vec3), tsobj.tsgeoinfo.data(), GL_STATIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, tsobj.tsgeoinfo.size() * sizeof(vec4), tsobj.tsgeoinfo.data(), GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, tsobj.tsgeo);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        std::cout << int(&tsobj.tsgeoinfo[0]) - int(&tsobj.tsgeoinfo[1]) << std::endl;
+        std::cout << sizeof(vec4) << std::endl;
 
         glGenBuffers(1, &tsobj.tsmeshdes);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, tsobj.tsmeshdes);
         glBufferData(GL_SHADER_STORAGE_BUFFER, tsobj.tsmeshlets.size() * sizeof(TS_meshlet), tsobj.tsmeshlets.data(), GL_STATIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, tsobj.tsmeshdes);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        std::cout << int(&tsobj.tsmeshlets[0]) - int(&tsobj.tsmeshlets[1]) << std::endl;
+        std::cout << sizeof(TS_meshlet) << std::endl;
     }
 
 

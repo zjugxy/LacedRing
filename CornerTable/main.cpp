@@ -14,7 +14,7 @@ int main()
     // generate vertices
     try
     {
-        if (!OpenMesh::IO::read_mesh(mesh, "E:/OpenMesh/sphere.obj"))
+        if (!OpenMesh::IO::read_mesh(mesh, "E:/OpenMesh/wtbunny.obj"))
         {
             std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
             return 1;
