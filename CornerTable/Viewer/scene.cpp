@@ -101,7 +101,7 @@ namespace glfwviewer {
         TS_MeshletLoad(tsobj.tsmeshlets, mesh, meshlets, tsobj.tsgeoinfo);
 
         //布局有问题
-        tsobj.tsmeshlets[0].color = vec4(1.0f, 1.0f, 0.0f,1.0f);
+        tsobj.tsmeshlets[0].color = vec4(1.0f, 1.0f, 0.0f,1.0f);//test setting
         glGenBuffers(1, &tsobj.tsgeo);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, tsobj.tsgeo);
         glBufferData(GL_SHADER_STORAGE_BUFFER, tsobj.tsgeoinfo.size() * sizeof(vec4), tsobj.tsgeoinfo.data(), GL_STATIC_DRAW);
@@ -119,6 +119,64 @@ namespace glfwviewer {
 
         std::cout << int(&tsobj.tsmeshlets[0]) - int(&tsobj.tsmeshlets[1]) << std::endl;
         std::cout << sizeof(TS_meshlet) << std::endl;
+    }
+
+    void Scene::LoadIXMeshlet(MyMesh mesh, Meshlets meshlets)
+    {
+        IX_meshletLoad(ixobj.ixmeshlets, mesh, meshlets, ixobj.ixgeoinfo, ixobj.ixveridx, ixobj.ixprimidx);
+        ixobj.ixmeshlets[1].color = vec4(1.0f, 1.0f, 0.0f, 1.0f);
+
+        //几何信息
+        glGenBuffers(1, &ixobj.IXGEO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ixobj.IXGEO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, ixobj.ixgeoinfo.size() * sizeof(vec4), ixobj.ixgeoinfo.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ixobj.IXGEO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        //VER info
+        glGenBuffers(1, &ixobj.IXVER);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ixobj.IXVER);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, ixobj.ixveridx.size() * sizeof(int), ixobj.ixveridx.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ixobj.IXVER);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        //PRIM info
+        glGenBuffers(1, &ixobj.IXPRIM);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ixobj.IXPRIM);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, ixobj.ixprimidx.size() * sizeof(int), ixobj.ixprimidx.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ixobj.IXPRIM);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        //meshlet info
+        glGenBuffers(1, &ixobj.IXMESHLET);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ixobj.IXMESHLET);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, ixobj.ixmeshlets.size() * sizeof(IX_meshlet), ixobj.ixmeshlets.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ixobj.IXMESHLET);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
+
+    }
+
+    void Scene::LoadSCMeshlet(MyMesh mesh, Meshlets meshlets)
+    {
+        SC_meshletLoad(scobj.scmeshlets, mesh, meshlets, scobj.scgeoinfo, scobj.scprimidx);
+        //几何信息
+        glGenBuffers(1, &scobj.SCGEO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, scobj.SCGEO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, scobj.scgeoinfo.size() * sizeof(vec4), scobj.scgeoinfo.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, scobj.SCGEO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        //PRIM info
+        glGenBuffers(1, &scobj.SCPRIM);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, scobj.SCPRIM);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, scobj.scprimidx.size() * sizeof(int), scobj.scprimidx.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, scobj.SCPRIM);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        //meshlet info
+        glGenBuffers(1, &scobj.SCMESHLET);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, scobj.SCMESHLET);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, scobj.scmeshlets.size() * sizeof(SC_meshlet), scobj.scmeshlets.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, scobj.SCMESHLET);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
     }
 
 
@@ -164,6 +222,16 @@ namespace glfwviewer {
     void Scene::renderTSML()
     {
         glDrawMeshTasksNV(0, tsobj.tsmeshlets.size());
+    }
+
+    void Scene::renderIXML()
+    {
+        glDrawMeshTasksNV(0, ixobj.ixmeshlets.size());
+    }
+
+    void Scene::renderSCML()
+    {
+        glDrawMeshTasksNV(0, scobj.scmeshlets.size());
     }
 
 

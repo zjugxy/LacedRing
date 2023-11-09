@@ -22,6 +22,9 @@
     <Filter Include="shaders">
       <UniqueIdentifier>{dad3b243-d58c-445d-82bb-e56a7a2341d2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\Meshshader">
+      <UniqueIdentifier>{4e4f494b-3601-4565-bb60-34cb2526f483}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -101,13 +104,19 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="TSmeshshader.glsl">
-      <Filter>shaders</Filter>
+      <Filter>shaders\Meshshader</Filter>
     </None>
     <None Include="TSfragshader.glsl">
-      <Filter>shaders</Filter>
+      <Filter>shaders\Meshshader</Filter>
+    </None>
+    <None Include="IXmeshshader.glsl">
+      <Filter>shaders\Meshshader</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
+    <Text Include="SCmeshshader.glsl">
+      <Filter>shaders\Meshshader</Filter>
+    </Text>
   </ItemGroup>
 </Project>

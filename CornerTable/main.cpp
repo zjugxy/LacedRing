@@ -46,18 +46,25 @@ int main()
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
-        myscene.LoadTSMeshlet(mesh, meshlets);
 
-        //需要写一个check环节查看meshlet内部的face以及其相应的geoinfo是不是对的
+        //myscene.LoadTSMeshlet(mesh, meshlets);
+        myscene.LoadCornerTable(mesh);
 
+        /*
+        need edit following three line
+        */
+        myscene.LoadSCMeshlet(mesh, meshlets);
         myview.set(&myscene);
-        myview.setMeshshader("TSmeshshader.glsl", "TSfragshader.glsl");
+        myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
 
         while (!glfwWindowShouldClose(myview.MYwindow()))
         {
             myview.processinput();
             //myview.RenderuseLR();
-            myview.RenderML();
+            /*
+            need edit to ust different meshlets type
+            */
+            myview.RenderSCML();
 
             glfwSwapBuffers(myview.MYwindow());
             glfwPollEvents();

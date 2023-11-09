@@ -90,6 +90,27 @@ namespace glfwviewer {
 	};
 
 
+	struct SceneRenderIX {
+		std::vector<IX_meshlet> ixmeshlets;
+		std::vector<vec4> ixgeoinfo;
+		std::vector<int> ixveridx;
+		std::vector<int> ixprimidx;
+		GLuint IXGEO;
+		GLuint IXVER;
+		GLuint IXPRIM;
+		GLuint IXMESHLET;
+	};
+
+	struct SceneRenderSC {
+		std::vector<SC_meshlet> scmeshlets;
+		std::vector<vec4> scgeoinfo;
+		std::vector<int> scprimidx;
+		GLuint SCGEO;
+		GLuint SCPRIM;
+		GLuint SCMESHLET;
+	};
+
+
 	class Scene
 	{
 	public:
@@ -104,6 +125,8 @@ namespace glfwviewer {
 		std::vector<SceneRenderobj> renlist;
 
 		SceneRenderTS tsobj;
+		SceneRenderIX ixobj;
+		SceneRenderSC scobj;
 
 	public:
 		Scene();
@@ -119,12 +142,19 @@ namespace glfwviewer {
 		void renderCT();
 		void renderCTring();
 		void renderLR();
-		void renderTSML();
+
 		//void renderobjs();
 
 
 		//meshlet load
 		void LoadTSMeshlet(MyMesh mesh, Meshlets meshlets);
+		void LoadIXMeshlet(MyMesh mesh, Meshlets meshlets);
+		void LoadSCMeshlet(MyMesh mesh, Meshlets meshlets);
+
+
+		void renderTSML();
+		void renderIXML();
+		void renderSCML();
 	};
 
 }

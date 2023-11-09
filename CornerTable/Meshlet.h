@@ -18,3 +18,25 @@ struct TS_meshlet
 
 void TS_MeshletLoad(std::vector<TS_meshlet>& loader, MyMesh mesh, Meshlets meshlets,std::vector<vec4>& geoinfo);
 
+
+struct IX_meshlet
+{
+	uint vertex_cnt;
+	uint vertex_begin;
+	uint primcnt;
+	uint primbegin;
+	vec4 color;
+};
+
+void IX_meshletLoad(std::vector<IX_meshlet>& loader, MyMesh mesh, Meshlets meshlets,std::vector<vec4>& geoinfo,std::vector<int>& vertexidx, std::vector<int>& primidx);
+
+struct SC_meshlet {
+	uint vertex_cnt;
+	uint vertex_begin;
+	uint primcnt;
+	uint primbegin;
+	vec4 color;
+
+};
+
+void SC_meshletLoad(std::vector<SC_meshlet>& loader, MyMesh mesh, Meshlets meshlets, std::vector<vec4>& geoinfo, std::vector<int>& primidx);

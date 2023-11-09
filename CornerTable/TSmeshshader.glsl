@@ -8,7 +8,7 @@ layout(max_vertices=96, max_primitives=32) out;
 layout(triangles) out;
 
 
-layout(std140, binding=1) readonly buffer vertex_data
+layout(std430, binding=1) readonly buffer vertex_data
 {
     vec4 position[];
 };
@@ -23,7 +23,7 @@ struct TS_meshlet
 	vec4 color;
 };
 
-layout(std140, binding=2) readonly buffer meshletdata
+layout(std430, binding=2) readonly buffer meshletdata
 {
     TS_meshlet meshlets[];
 };
@@ -47,10 +47,11 @@ void main()
 		TS_meshlet meshdes = meshlets[gl_WorkGroupID.x];
 		uint begin = meshdes.vertex_begin;
 		uint irc = gl_LocalInvocationID.x*3;
-
+		uint mi = gl_WorkGroupID.x;
+		uint threadid = gl_LocalInvocationID.x;
 
 	//每个线程处理一个图元，因为是triangle soup 处理三个顶点，添加三个index
-	if(gl_LocalInvocationID.x<meshdes.primitive_cnt){
+	if(gl_LocalInvocationID.x<meshdes.primitive_cnt&&mi==0&&threadid==0){
 
 		gl_MeshVerticesNV[gl_LocalInvocationID.x*3].gl_Position = projection*view*model*position[begin+irc];
 		gl_MeshVerticesNV[gl_LocalInvocationID.x*3+1].gl_Position = projection*view*model*position[begin+1+irc];

@@ -168,6 +168,7 @@
   <ItemGroup>
     <None Include="fragshader.glsl" />
     <None Include="geometryshader.glsl" />
+    <None Include="IXmeshshader.glsl" />
     <None Include="ringfrag.glsl" />
     <None Include="ringvertex.glsl" />
     <None Include="TSfragshader.glsl" />
@@ -176,6 +177,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
+    <Text Include="SCmeshshader.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

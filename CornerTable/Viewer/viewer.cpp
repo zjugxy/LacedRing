@@ -210,15 +210,6 @@ namespace glfwviewer {
 		m_shader.setMat4("projection", m_camera.projMatrix());
 		m_shader.setMat4("view", m_camera.viewMatrix());
 		m_shader.setMat4("model", model);
-		//m_scene->draw()Ö»äÖÈ¾demo
-
-		//unsigned int uniformfaceblock = glGetUniformBlockIndex(m_shader.ID, "faceidtocolor");
-		//glUniformBlockBinding(m_shader.ID, uniformfaceblock, 0);
-		//if(enabletyperender==false)
-		//	m_shader.setArrayInt("faceidtocolor", m_scene->ctptr->facerightleftwithcolor);
-		//else
-		//	m_shader.setArrayInt("faceidtocolor", m_scene->ctptr->RenderTriType);
-
 		m_shader.setInt("tex0", 0);
 		m_shader.setBool("UseCT", true);
 
@@ -236,11 +227,9 @@ namespace glfwviewer {
 		m_shader.setVec3("lightColor", m_light.lightcolor);
 
 		glm::mat4 model = glm::mat4(1.0f);
-		//model = glm::translate(model, vec3(0.2, 0.2, 0.0));
 		m_shader.setMat4("projection", m_camera.projMatrix());
 		m_shader.setMat4("view", m_camera.viewMatrix());
 		m_shader.setMat4("model", model);
-		//m_shader.setArrayInt("faceidtocolor", m_scene->lrptr->facetypeid);
 		m_shader.setBool("UseCT", false);
 		m_shader.setInt("tex1", 1);
 
@@ -248,7 +237,7 @@ namespace glfwviewer {
 
 	}
 
-	void Viewer::RenderML()
+	void Viewer::RenderTSML()
 	{
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -259,11 +248,9 @@ namespace glfwviewer {
 		m_meshshader.setVec3("lightColor", m_light.lightcolor);
 
 		glm::mat4 model = glm::mat4(1.0f);
-		//model = glm::translate(model, vec3(0.2, 0.2, 0.0));
 		m_meshshader.setMat4("projection", m_camera.projMatrix());
 		m_meshshader.setMat4("view", m_camera.viewMatrix());
 		m_meshshader.setMat4("model", model);
-		//m_shader.setArrayInt("faceidtocolor", m_scene->lrptr->facetypeid);
 
 		m_scene->renderTSML();
 	}
@@ -272,12 +259,47 @@ namespace glfwviewer {
 	{
 		ring_shader.use();
 		glm::mat4 model = glm::mat4(1.0f);
-		//model = glm::translate(model, vec3(0.2, 0.2, 0.0));
 		ring_shader.setMat4("projection", m_camera.projMatrix());
 		ring_shader.setMat4("view", m_camera.viewMatrix());
 		ring_shader.setMat4("model", model);
 		m_scene->renderCTring();
 	}
+
+	 void Viewer::RenderIXML()
+	{
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		m_meshshader.use();
+
+		m_meshshader.setVec3("viewPos", m_camera.center());
+		m_meshshader.setVec3("lightPos", m_light.lightpos);
+		m_meshshader.setVec3("lightColor", m_light.lightcolor);
+
+		glm::mat4 model = glm::mat4(1.0f);
+		m_meshshader.setMat4("projection", m_camera.projMatrix());
+		m_meshshader.setMat4("view", m_camera.viewMatrix());
+		m_meshshader.setMat4("model", model);
+
+		m_scene->renderIXML();
+	}
+
+	 void Viewer::RenderSCML()
+	 {
+		 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		 m_meshshader.use();
+
+		 m_meshshader.setVec3("viewPos", m_camera.center());
+		 m_meshshader.setVec3("lightPos", m_light.lightpos);
+		 m_meshshader.setVec3("lightColor", m_light.lightcolor);
+
+		 glm::mat4 model = glm::mat4(1.0f);
+		 m_meshshader.setMat4("projection", m_camera.projMatrix());
+		 m_meshshader.setMat4("view", m_camera.viewMatrix());
+		 m_meshshader.setMat4("model", model);
+
+		 m_scene->renderSCML();
+	 }
 
 	
 

@@ -42,8 +42,10 @@ namespace glfwviewer {
 		virtual void printhelp(char* text[]);
 		virtual void Renderct(bool enabletyperender = false);
 		virtual void RenderuseLR();
-		virtual void RenderML();
+		virtual void RenderTSML();
 		virtual void Renderring();
+		virtual void RenderIXML();
+		virtual void RenderSCML();
 
 		//input func below
 		virtual void initGLFW();
