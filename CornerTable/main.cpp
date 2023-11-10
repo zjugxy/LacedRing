@@ -14,7 +14,7 @@ int main()
     // generate vertices
     try
     {
-        if (!OpenMesh::IO::read_mesh(mesh, "E:/OpenMesh/wtbunny.obj"))
+        if (!OpenMesh::IO::read_mesh(mesh, "E:/OpenMesh/sphere.obj"))
         {
             std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
             return 1;
@@ -33,7 +33,7 @@ int main()
     //ClusteringAlgorithm clu;
     //auto meshlets = clu.Cluster(mesh, 0.02);
 
-    MyCluster clu(mesh, 64, 126,1.0);
+    MyCluster clu(mesh, 64, 126,0.5);
     auto meshlets = clu.oldmeshlets;
 
     int dd = 0;
