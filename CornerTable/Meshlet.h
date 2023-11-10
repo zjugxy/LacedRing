@@ -40,3 +40,22 @@ struct SC_meshlet {
 };
 
 void SC_meshletLoad(std::vector<SC_meshlet>& loader, MyMesh mesh, Meshlets meshlets, std::vector<vec4>& geoinfo, std::vector<int>& primidx);
+
+struct LW_meshlet
+{
+	uint internalwireid;
+	std::vector<uint> externalwireid;
+};
+//
+struct LWIDarray {
+	std::vector<uint> prefixsum;
+};
+
+struct LacedWrie
+{
+	std::vector<uint> left;
+	std::vector<uint> right;
+	std::vector<vec3> geoinfo;
+};
+
+//需要一个前缀和数组标记每一个meshlet的start

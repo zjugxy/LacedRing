@@ -6,7 +6,7 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"Viewer/scene.h"
 #include"Viewer/viewer.h"
 #include"ClusteringALgotithm.h"
-
+#include"MyCluster.h"
 int main()
 {
     MyMesh mesh;
@@ -30,8 +30,12 @@ int main()
     
     using Eigen::MatrixXd;
 
-    ClusteringAlgorithm clu;
-    auto meshlets = clu.Cluster(mesh, 0.02);
+    //ClusteringAlgorithm clu;
+    //auto meshlets = clu.Cluster(mesh, 0.02);
+
+    MyCluster clu(mesh, 64, 126,1.0);
+    auto meshlets = clu.oldmeshlets;
+
     int dd = 0;
     for (const auto& meshlet : meshlets) {
         dd += meshlet.size();

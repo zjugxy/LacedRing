@@ -148,6 +148,7 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="meshletloader.cpp" />
+    <ClCompile Include="MyCluster.cpp" />
     <ClCompile Include="MyLR.cpp" />
     <ClCompile Include="Viewer\camera.cpp" />
     <ClCompile Include="Viewer\scene.cpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="CornerTable.h" />
     <ClInclude Include="Meshlet.h" />
     <ClInclude Include="MShader.h" />
+    <ClInclude Include="MyCluster.h" />
     <ClInclude Include="MyLR.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Viewer\camera.h" />
@@ -176,7 +178,7 @@
     <None Include="vertexshader.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="readme.txt" />
+    <Text Include="readme.md" />
     <Text Include="SCmeshshader.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

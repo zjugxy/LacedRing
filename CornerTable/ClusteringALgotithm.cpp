@@ -21,24 +21,9 @@ DualNodeType DualNodeType::operator+(const DualNodeType& rhs) const {
 }
 
 std::vector<std::vector<int>> ClusteringAlgorithm::Cluster(MyMesh mesh, double th) {
-    // V´æ´¢vertices geometry information
-    // F´æ´¢Face index information
-
-    Eigen::MatrixXd V;
-    Eigen::MatrixXi F;
-    //igl::readOBJ(input_filename, V, F);
-
     std::vector<DualNodeType> dual_nodes;
     std::unordered_set<int> valid;
-    //raw version
-    //for (int i = 0; i < F.rows(); ++i) {
-    //    int i0 = F(i, 0), i1 = F(i, 1), i2 = F(i, 2);
-    //    DualNodeType dn0(i, V.row(i0).transpose().eval() * V.row(i0), V.row(i0).transpose(), 1);
-    //    DualNodeType dn1(i, V.row(i1).transpose().eval() * V.row(i1), V.row(i1).transpose(), 1);
-    //    DualNodeType dn2(i, V.row(i2).transpose().eval() * V.row(i2), V.row(i2).transpose(), 1);
-    //    dual_nodes.emplace_back(dn0 + dn1 + dn2);
-    //    valid.insert(i);
-    //}
+
     //openmesh rewrite version
     for (auto& face : mesh.faces()) {
         std::vector<Eigen::Vector3<double>> vecs;

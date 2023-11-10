@@ -54,6 +54,9 @@
     <ClCompile Include="meshletloader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MyCluster.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CornerTable.h">
@@ -86,6 +89,9 @@
     <ClInclude Include="MShader.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="MyCluster.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="fragshader.glsl">
@@ -114,7 +120,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="readme.txt" />
+    <Text Include="readme.md" />
     <Text Include="SCmeshshader.glsl">
       <Filter>shaders\Meshshader</Filter>
     </Text>
