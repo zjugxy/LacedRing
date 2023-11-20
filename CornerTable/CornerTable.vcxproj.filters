@@ -25,6 +25,9 @@
     <Filter Include="shaders\Meshshader">
       <UniqueIdentifier>{4e4f494b-3601-4565-bb60-34cb2526f483}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\Lineshader">
+      <UniqueIdentifier>{4e769952-657d-47b0-9d51-a5857d3347c4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -103,12 +106,6 @@
     <None Include="geometryshader.glsl">
       <Filter>shaders</Filter>
     </None>
-    <None Include="ringvertex.glsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="ringfrag.glsl">
-      <Filter>shaders</Filter>
-    </None>
     <None Include="TSmeshshader.glsl">
       <Filter>shaders\Meshshader</Filter>
     </None>
@@ -117,6 +114,12 @@
     </None>
     <None Include="IXmeshshader.glsl">
       <Filter>shaders\Meshshader</Filter>
+    </None>
+    <None Include="ringvertex.glsl">
+      <Filter>shaders\Lineshader</Filter>
+    </None>
+    <None Include="ringfrag.glsl">
+      <Filter>shaders\Lineshader</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

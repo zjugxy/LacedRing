@@ -96,6 +96,56 @@ namespace glfwviewer {
         return;
     }
 
+    void Scene::LoadLaceWire(const MyMesh& mesh, const MyCluster& clu)
+    {
+        const std::vector<LaceWires>& ref = clu.lacewires;
+
+        glGenVertexArrays(1, &lineobj.VAO);
+        glGenBuffers(1, &lineobj.VBO);
+        glGenBuffers(1, &lineobj.EBO);
+        uint i = 0;
+        for (const auto& wireloop : ref) {
+            for (const auto& wire : wireloop.wires) {
+                for ( auto it = wire.cbegin(); it != wire.cend(); it++) {
+                    uint idx = *it;
+                    auto vh = mesh.vertex_handle(idx);
+                    auto pnt = mesh.point(vh);
+                    lineobj.geoinfo.emplace_back(pnt[0], pnt[1], pnt[2]);
+                    lineobj.indices.push_back(i++);
+                }
+                //lineobj.geoinfo.pop_back();
+                //lineobj.indices.pop_back();
+                //i -= 1;
+            }
+            lineobj.indices.push_back(0xffffffff);
+        }
+
+    }
+
+    void Scene::LoadLacePoint(const MyMesh& mesh, const MyCluster& clu)
+    {
+        const std::vector<VertexSet> vsetref = clu.vertexsets;
+        glGenVertexArrays(1, &pntobj.VAO);
+        glGenBuffers(1, &pntobj.VBO);
+
+        for (const auto& elems : vsetref) {
+            //int idx = elem;
+            //auto vh = mesh.vertex_handle(idx);
+            //auto pnt = mesh.point(vh);
+            //pntobj.geoinfo.emplace_back(pnt[0], pnt[1], pnt[2]);
+            if (elems.boundset.size() != 0) {
+                for (const auto& elem : elems.cornerset) {
+                        int idx = elem;
+                        auto vh = mesh.vertex_handle(idx);
+                        auto pnt = mesh.point(vh);
+                        pntobj.geoinfo.emplace_back(pnt[0], pnt[1], pnt[2]);
+                }
+                break;
+            }
+        }
+
+    }
+
     void Scene::LoadTSMeshlet(MyMesh mesh, Meshlets meshlets)
     {
         TS_MeshletLoad(tsobj.tsmeshlets, mesh, meshlets, tsobj.tsgeoinfo);
@@ -217,6 +267,32 @@ namespace glfwviewer {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, lrptr->EBO_check.size() * sizeof(int), lrptr->EBO_check.data(), GL_DYNAMIC_DRAW);
 
         glDrawElements(GL_TRIANGLES, lrptr->EBO_check.size(), GL_UNSIGNED_INT, 0);
+    }
+
+    void Scene::renderWireLine()
+    {
+        glBindVertexArray(lineobj.VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, lineobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * lineobj.geoinfo.size(), lineobj.geoinfo.data(), GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX);
+        glLineWidth(10.0f);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lineobj.EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, lineobj.indices.size() * sizeof(uint), lineobj.indices.data(), GL_DYNAMIC_DRAW);
+        glDrawElements(GL_LINE_STRIP, lineobj.indices.size(), GL_UNSIGNED_INT, 0);
+    }
+
+    void Scene::renderWirePnt()
+    {
+        glBindVertexArray(pntobj.VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, pntobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * pntobj.geoinfo.size(), pntobj.geoinfo.data(), GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glPointSize(10.0f);
+        glDrawArrays(GL_POINTS, 0, pntobj.geoinfo.size());
     }
 
     void Scene::renderTSML()

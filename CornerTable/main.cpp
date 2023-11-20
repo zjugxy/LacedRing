@@ -7,14 +7,19 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"Viewer/viewer.h"
 #include"ClusteringALgotithm.h"
 #include"MyCluster.h"
+
+bool meshletexist = false;
+std::string meshletfilename;
+
 int main()
 {
     MyMesh mesh;
-
+    Meshlets meshlets;
+    std::string filename = "E:/OpenMesh/wtbunny.obj";
     // generate vertices
     try
     {
-        if (!OpenMesh::IO::read_mesh(mesh, "E:/OpenMesh/sphere.obj"))
+        if (!OpenMesh::IO::read_mesh(mesh, filename))
         {
             std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
             return 1;
@@ -26,22 +31,27 @@ int main()
         return 1;
     }
 
+    meshletfilename = changeFileExtension(filename, "meshlet");
+
+    //meshlets = readVectorFromFile(meshletfilename);
+    //if (!meshlets.empty()) {
+    //    meshletexist = true;
+    //}
+
     std::cout <<"face num:" << mesh.n_faces() << std::endl<<"vert num:" << mesh.n_vertices() << std::endl <<"halfedge :" << mesh.n_halfedges() << std::endl;
     
-    using Eigen::MatrixXd;
+   // if (meshletexist == false) {
+        MyCluster clu(mesh, 64, 126, 0.5);
+        meshlets = clu.oldmeshlets;
+        writeVectorToFile(meshlets, meshletfilename);
+   // }
 
-    //ClusteringAlgorithm clu;
-    //auto meshlets = clu.Cluster(mesh, 0.02);
-
-    MyCluster clu(mesh, 64, 126,0.5);
-    auto meshlets = clu.oldmeshlets;
-
-    int dd = 0;
-    for (const auto& meshlet : meshlets) {
-        dd += meshlet.size();
-    }
-    std::cout << "total face in meshlets " << dd << std::endl;
-    std::cout << "total face in mesh" << mesh.n_faces() << std::endl;
+    //int dd = 0;
+    //for (const auto& meshlet : meshlets) {
+    //    dd += meshlet.size();
+    //}
+    //std::cout << "total face in meshlets " << dd << std::endl;
+    //std::cout << "total face in mesh" << mesh.n_faces() << std::endl;
     //
 
 
@@ -57,10 +67,12 @@ int main()
         /*
         need edit following three line
         */
+        myscene.LoadLaceWire(mesh,clu);
+        //myscene.LoadLacePoint(mesh, clu);
         myscene.LoadSCMeshlet(mesh, meshlets);
         myview.set(&myscene);
         myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
-
+        myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
         while (!glfwWindowShouldClose(myview.MYwindow()))
         {
             myview.processinput();
@@ -69,6 +81,8 @@ int main()
             need edit to ust different meshlets type
             */
             myview.RenderSCML();
+            //myview.RenderWirePnt();
+            myview.RenderWireLine();
 
             glfwSwapBuffers(myview.MYwindow());
             glfwPollEvents();
@@ -76,9 +90,6 @@ int main()
         glfwTerminate();
         exit(EXIT_SUCCESS);
     }
-
-
-
 
     return 0;
 }

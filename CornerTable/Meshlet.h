@@ -3,6 +3,7 @@
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 typedef std::vector<std::vector<int>> Meshlets;
+#include<string>
 using uint = unsigned int;
 //一个SSBO，其中装载了所有三角形序列
 
@@ -51,11 +52,41 @@ struct LWIDarray {
 	std::vector<uint> prefixsum;
 };
 
-struct LacedWrie
+struct ExternalWire
 {
 	std::vector<uint> left;
 	std::vector<uint> right;
 	std::vector<vec3> geoinfo;
 };
 
+struct InternalWire
+{
+	std::vector<uint> left;
+	std::vector<uint> right;
+	std::vector<vec3> geoinfo;
+};
+
+struct LaceWire_meshlet {
+	std::vector<uint> externalwireids;
+	InternalWire interwire;
+	std::vector<short> externalLR;
+
+	std::set<int> faces;
+	std::set<int> vertexs;
+	std::set<int> adj_nodes;
+
+	int vertexnum;
+	int facenum;
+
+};
 //需要一个前缀和数组标记每一个meshlet的start
+
+
+
+//meshlet store and load
+
+void writeVectorToFile(const Meshlets& data, const std::string& filename);
+
+Meshlets readVectorFromFile(const std::string& filename);
+
+std::string changeFileExtension(const std::string& filename, const std::string& newExtension);

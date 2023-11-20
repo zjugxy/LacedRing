@@ -1,6 +1,10 @@
 #include"Meshlet.h"
 #include<random>
 #include<unordered_map>
+#include<iostream>
+#include<fstream>
+#include<sstream>
+
 //TS
 void TS_MeshletLoad(std::vector<TS_meshlet>& loader, MyMesh mesh, Meshlets meshlets,std::vector<vec4>& geometryinfo) {
 
@@ -139,5 +143,75 @@ void SC_meshletLoad(std::vector<SC_meshlet>& loader, MyMesh mesh, Meshlets meshl
 		temp.color = vec4(dis(gen), dis(gen), dis(gen), 1.0f);
 		loader.push_back(temp);
 	}
+}
+
+void writeVectorToFile(const Meshlets& data, const std::string& filename)
+{
+	std::ofstream outFile(filename,std::ios::out | std::ios::trunc);
+	if (!outFile) {
+		std::cerr << "无法打开文件：" << filename << std::endl;
+		return;
+	}
+	outFile << data.size() << std::endl;
+	// 逐行写入数组元素
+	for (const auto& row : data) {
+		outFile << row.size()<<" ";
+		for (int element : row) {
+			outFile << element << " ";
+		}
+		outFile << std::endl;
+	}
+	outFile.close();
+}
+
+Meshlets readVectorFromFile(const std::string& filename)
+{
+	Meshlets data;
+	std::ifstream inFile(filename);
+
+	if (!inFile) {
+		std::cerr << "无法打开文件：" << filename << std::endl;
+		return {};
+	}
+
+	std::string firstline,line;
+	std::getline(inFile, firstline);
+	int linenum;
+	std::stringstream firsts(firstline);
+	firsts >> linenum;
+
+
+	while (std::getline(inFile, line)) {
+		linenum--;
+		std::vector<int> row;
+		std::stringstream ss(line);
+		int element,elenum;
+		ss >> elenum;
+		while (ss >> element) {
+			row.push_back(element);
+			elenum--;
+		}
+		if (elenum != 0) {
+			std::cerr << "文件行数内部元素个数不匹配：" << filename << std::endl;
+			return {};
+		}
+		data.push_back(row);
+	}
+
+	if (linenum != 0) {
+		std::cerr << "文件行数不匹配：" << filename << std::endl;
+		return {};
+	}
+
+	inFile.close();
+	return data;
+}
+
+std::string changeFileExtension(const std::string& filename, const std::string& newExtension) {
+	size_t lastDotPos = filename.find_last_of('.');
+	if (lastDotPos != std::string::npos) {
+		return filename.substr(0, lastDotPos + 1) + newExtension;
+	}
+	return filename;
 }
 

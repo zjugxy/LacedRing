@@ -60,7 +60,7 @@ MyCluster::MyCluster(const MyMesh& mesh, int maxvertex, int maxface,double alpha
             }
         adj_graph[id0].erase(id1);
 
-        dualnodes[id1].version == -1;
+        dualnodes[id1].version = -1;
         dualnodes[id1].vertices.clear(); 
         dualnodes[id1].faces.clear();
         dualnodes[id1].num_face = 0;
@@ -83,6 +83,102 @@ MyCluster::MyCluster(const MyMesh& mesh, int maxvertex, int maxface,double alpha
         if (elem.version != -1)
             oldmeshlets.push_back(elem.faces);
     }
+
+    LacedWireGenerator(mesh);
+
+
+}
+
+void MyCluster::LacedWireGenerator(const MyMesh& mesh)
+{
+    vertexsets.resize(dualnodes.size());
+    //先生成vertex sets
+    int dualid = 0;
+    for (auto& elem : dualnodes) {
+        //若node 有效
+        if (elem.version != -1&&elem.faces.size()!=0) {
+            for (auto& ver : elem.vertices) {
+                int cnt = VertexOccurCnt(ver, dualid);
+                if (cnt >= 2)vertexsets[dualid].boundset.insert(ver);
+                if (cnt > 2)vertexsets[dualid].cornerset.insert(ver);
+            }
+            //被包围了，所以没有corner
+            if ((vertexsets[dualid].boundset.size() != 0) && (vertexsets[dualid].cornerset.size()==0)) {
+                vertexsets[dualid].surrounded = 1;//被包围
+                if (adj_graph[dualid].size() != 1) {
+                    std::cout << "error may occur in surrounded mark" << std::endl;
+                }
+                int adjidx = adj_graph[dualid].begin()->first;
+                vertexsets[adjidx].surrounded = 2;//包围了
+            }
+
+            for (auto& face : elem.faces)
+                vertexsets[dualid].faces.insert(face);
+        }
+        dualid++;
+    }
+
+    lacewires.resize(dualnodes.size());
+
+    std::vector<int> lateaddress;
+    for (int i = 0; i < vertexsets.size(); i++) {
+        if (vertexsets[i].boundset.size() != 0) {
+            LaceWires temp;
+            temp.dualid = i;
+            {
+                if(i==1570)
+                    std::cout << "debug　" << i << std::endl;
+                if (vertexsets[i].surrounded != 0) {
+                    lateaddress.push_back(i);
+                    continue;
+                }
+
+                LoadVertexset2Wire(temp, vertexsets[i], mesh);
+            }
+            lacewires[i] = (temp);
+        }
+    }
+
+    //for (auto& id : lateaddress) {
+    //    int adjid = (adj_graph[id].begin())->first;
+    //    LaceWires temp;
+    //    temp.dualid = id;
+    //    LoadSingleLoop(temp, vertexsets[id], mesh);
+    //    lacewires.push_back(temp);
+    //    for(auto&elem:lacewires)
+    //        if (elem.dualid == adjid) {
+    //            elem.wires.push_back(temp.wires[0]);
+    //        }
+    //}
+    for (auto& id : lateaddress) {
+        if (vertexsets[id].surrounded == 1) {
+            if (vertexsets[id].cornerset.size() != 0)std::cout << "error lateaddress sur ==1" << std::endl;
+            //先处理lacewires[i]
+            int adjid = (adj_graph[id].begin())->first;
+            LaceWires temp;
+            temp.dualid = id;
+            LoadSingleLoop(temp, vertexsets[id], mesh);
+            lacewires[id] = (temp);
+            lacewires[adjid].wires.push_back(temp.wires[0]);
+        }
+    }
+
+    //for (auto& id : lateaddress) {
+    //    if (vertexsets[id].surrounded == 2) {
+    //        LaceWires& temp = lacewires[id];
+    //        temp.dualid = id;
+    //        if(temp.wires.size()==0)std::cout << "error lateaddress sur==2" << std::endl;
+    //        LoadWiresur2(temp, vertexsets[id], mesh);
+    //    }
+    //}
+
+
+}
+
+void MyCluster::PackintoLaceWire(std::vector<ExternalWire>& ewires, std::vector<LaceWire_meshlet>& meshlets, std::map<int, int>& dual2idx)
+{
+    std::map<std::array<int, 4>, int> wire4idx2id;
+    //可能可以在这里处理掉许多corner case
 
 
 }
@@ -146,6 +242,110 @@ void MyCluster::BuildDualNodes(const MyMesh& mesh)
 
 }
 
+void MyCluster::LoadVertexset2Wire(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh)
+{
+    int nodeid = wire.dualid;
+    int start = *(vertexset.cornerset.cbegin());
+    int pnt = start;
+    std::set<int> pre = {};
+    for (int i = 0; i < vertexset.cornerset.size(); i++) {
+        std::vector<int> onewire;
+        //int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
+        //pre.insert(pnt);
+
+        while (true)
+        {
+            onewire.push_back(pnt);
+            //nextpnt找不到的
+            if (pre.size() == (vertexset.boundset.size() - 1)) {
+                onewire.push_back(start);
+                wire.wires.push_back(onewire);
+                return;
+            }
+            int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
+            pre.insert(pnt);
+            pnt = nextpnt;
+            //pnt为corner
+            if (vertexset.cornerset.find(pnt) != vertexset.cornerset.end()) {
+                onewire.push_back(pnt);
+                wire.wires.push_back(onewire);
+                break;
+            }
+            else {
+                continue;
+            }
+        }
+
+    }
+
+}
+
+void MyCluster::LoadWiresur2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh)
+{
+
+    int nodeid = wire.dualid;
+    int start = *(vertexset.cornerset.cbegin());
+    int pnt = start;
+    std::set<int> pre = {};
+    for (auto& singleloop : wire.wires)
+        for (auto& elem : singleloop)
+            pre.insert(elem);
+
+    for (int i = 0; i < vertexset.cornerset.size(); i++) {
+        std::vector<int> onewire;
+        //int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
+        //pre.insert(pnt);
+
+        while (true)
+        {
+            onewire.push_back(pnt);
+            //nextpnt找不到的
+            if (pre.size() == (vertexset.boundset.size() - 1)) {
+                onewire.push_back(start);
+                wire.wires.push_back(onewire);
+                return;
+            }
+            int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
+            pre.insert(pnt);
+            pnt = nextpnt;
+            //pnt为corner
+            if (vertexset.cornerset.find(pnt) != vertexset.cornerset.end()) {
+                onewire.push_back(pnt);
+                wire.wires.push_back(onewire);
+                break;
+            }
+            else {
+                continue;
+            }
+        }
+
+    }
+}
+
+void MyCluster::LoadSingleLoop(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh)
+{
+    int start = *vertexset.boundset.begin();
+    int pnt = start;
+    std::vector<int> onewire;
+    std::set<int> pre = {};
+    while (true)
+    {
+        onewire.push_back(pnt);
+        //nextpnt找不到的
+        if (pre.size() == (vertexset.boundset.size() - 1)) {
+            onewire.push_back(start);
+            wire.wires.push_back(onewire);
+            return;
+        }
+        int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
+        pre.insert(pnt);
+        pnt = nextpnt;
+        //pnt为corner
+    }
+    std::cout << "error in single loop" << std::endl;
+
+}
+
 double MyCluster::EvaluateCost(int id1, int id2)
 {
     auto dn1 = dualnodes[id1].costelem;
@@ -183,9 +383,23 @@ double MyCluster::EvaluateCost(int id1, int id2)
     double d = -n.transpose().dot(b) / c;
 
     double Efit =  ((n.transpose().eval() * A).dot(n) + 2 * d * n.transpose().eval().dot(b)) / c + d * d ;
-    //    return Efit + alphas * Eshape ;
-    double addelem = dualnodes[id1].num_face + dualnodes[id2].num_face;
-    return Efit + alphas * Eshape  + (addelem/max_face)*(addelem/max_face);
+    return Efit + alphas * Eshape ;
+    //double addelem = dualnodes[id1].num_face + dualnodes[id2].num_face;
+    //return Efit + alphas * Eshape  + (addelem/max_face)*(addelem/max_face);
+}
+
+int MyCluster::VertexOccurCnt(int vertexid, int dualnodeid) const
+{
+    int cnt = 1;
+    for (auto& neigh : adj_graph[dualnodeid]) 
+        if (dualnodes[neigh.first].version != -1) {
+            //邻居有效
+            if (dualnodes[neigh.first].vertices.find(vertexid) != dualnodes[neigh.first].vertices.end()) {
+                cnt++;
+            }
+        }
+
+    return cnt;
 }
 
 bool MyCluster::VerticeInsertCheck(int id1, int id2,std::unordered_set<uint>& test)
@@ -194,6 +408,40 @@ bool MyCluster::VerticeInsertCheck(int id1, int id2,std::unordered_set<uint>& te
     for (auto& elem : dualnodes[id2].vertices)test.insert(elem);
     if (test.size() > max_vertex)return false;
     return true;
+}
+
+int MyCluster::FindNextPnt(int pnt, std::set<int>& pre,const VertexSet& vertexset,const MyMesh& mesh) const
+{
+    auto vhl = mesh.vertex_handle(pnt);
+    
+
+    //for (MyMesh::VertexVertexIter vv_it = mesh.cvv_begin(vhl); vv_it != mesh.cvv_end(vhl); ++vv_it) {
+    //    int idx = vv_it->idx();
+    //    if (  (pre.find(idx) == pre.end()) 
+    //        && (vertexset.boundset.find(idx) != vertexset.boundset.end()) ) {
+    //        return idx;
+    //    }
+    //}
+    for (auto ve_it = mesh.cve_begin(vhl); ve_it != mesh.cve_end(vhl); ++ve_it) {
+        int fidx0 = ve_it->h0().face().idx();
+        int fidx1 = ve_it->h1().face().idx();
+        
+        int count0 = vertexset.faces.count(fidx0);
+        int count1 = vertexset.faces.count(fidx1);
+        //不是边界边
+        if ((count0 == 1) && (count1 == 1))continue;
+        else if ((count0 == 0) && (count1 == 0))continue;
+        else {
+            int temp = ve_it->v0().idx();
+            int idx = (temp == pnt) ? ve_it->v1().idx() : temp;
+            if (pre.find(idx) == pre.end())return idx;
+            else continue;
+        }
+
+    }
+
+    std::cout << "error in find next pnt" << std::endl;
+    return -1;
 }
 
 EvaluateElem EvaluateElem::operator+(const EvaluateElem& rhs) const

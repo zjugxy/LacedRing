@@ -7,6 +7,7 @@
 #include"../CornerTable.h"
 #include"../MyLR.h"
 #include"../Meshlet.h"
+#include"../MyCluster.h"
 namespace glfwviewer {
 
 	class BoundingSphere
@@ -89,7 +90,6 @@ namespace glfwviewer {
 		GLuint tsmeshdes;
 	};
 
-
 	struct SceneRenderIX {
 		std::vector<IX_meshlet> ixmeshlets;
 		std::vector<vec4> ixgeoinfo;
@@ -110,6 +110,20 @@ namespace glfwviewer {
 		GLuint SCMESHLET;
 	};
 
+	struct SceneRenderWireline
+	{
+		GLuint VAO;
+		GLuint VBO;
+		GLuint EBO;
+		std::vector<uint> indices;
+		std::vector<vec3> geoinfo;
+	};
+
+	struct SceneRenderWirePoint {
+		GLuint VAO;
+		GLuint VBO;
+		std::vector<vec3> geoinfo;
+	};
 
 	class Scene
 	{
@@ -120,6 +134,7 @@ namespace glfwviewer {
 		SceneRenderCT ctobj;
 		const CornerTable* ctptr;
 		const MyLR* lrptr;
+
 		SceneRenderLR lrobj;
 		SceneRenderMeshlet mlobj;
 		std::vector<SceneRenderobj> renlist;
@@ -128,6 +143,8 @@ namespace glfwviewer {
 		SceneRenderIX ixobj;
 		SceneRenderSC scobj;
 
+		SceneRenderWireline lineobj;
+		SceneRenderWirePoint pntobj;
 	public:
 		Scene();
 		~Scene();
@@ -137,12 +154,17 @@ namespace glfwviewer {
 
 		void LoadCornerTable(const CornerTable& ct);
 		void LoadLR(const MyLR& lr);
-
+		void LoadLaceWire(const MyMesh& mesh,const MyCluster& clu);
+		void LoadLacePoint(const MyMesh& mesh, const MyCluster& clu);
+		
+		
 		void renderML();
 		void renderCT();
 		void renderCTring();
 		void renderLR();
 
+		void renderWireLine();
+		void renderWirePnt();
 		//void renderobjs();
 
 

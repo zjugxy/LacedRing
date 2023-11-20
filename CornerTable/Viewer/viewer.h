@@ -46,7 +46,8 @@ namespace glfwviewer {
 		virtual void Renderring();
 		virtual void RenderIXML();
 		virtual void RenderSCML();
-
+		virtual void RenderWireLine();
+		virtual void RenderWirePnt();
 		//input func below
 		virtual void initGLFW();
 		virtual void processinput();
@@ -69,6 +70,9 @@ namespace glfwviewer {
 		virtual void setshader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr) {
 			m_shader = Shader(vertexPath, fragmentPath, geometryPath);
 		}
+		virtual void setlineshader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr) {
+			m_line_shader = Shader(vertexPath, fragmentPath, geometryPath);
+		}
 		virtual void setMeshshader(const char* mesh, const char* frag);
 		virtual void setringshader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr) {
 			ring_shader = Shader(vertexPath, fragmentPath, geometryPath);
@@ -88,6 +92,7 @@ namespace glfwviewer {
 		Shader ring_shader;
 		Shader LR_shader;
 		MShader m_meshshader;
+		Shader m_line_shader;
 		bool firstMouse = true;
 		bool sign_view = false;
 
