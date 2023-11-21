@@ -62,6 +62,7 @@ public:
 	int max_vertex;
 	int max_face;
 	double alphas;
+	std::vector<int> lateaddress;
 
 public:
 	MyCluster(const MyMesh& mesh, int maxvertex, int maxface,double alpha_shape);
@@ -80,7 +81,7 @@ private:
 	EvaluateElem RefreshElem(const EvaluateElem& elem1, const EvaluateElem& elem2
 	,int id1,int id2);
 
-
+	std::array<int, 4> packvec2array(const std::vector<int>& vec);
 
 	void LoadVertexset2Wire(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
 	void LoadWiresur2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);

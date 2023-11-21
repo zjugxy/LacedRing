@@ -120,7 +120,7 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
 
     lacewires.resize(dualnodes.size());
 
-    std::vector<int> lateaddress;
+
     for (int i = 0; i < vertexsets.size(); i++) {
         if (vertexsets[i].boundset.size() != 0) {
             LaceWires temp;
@@ -178,10 +178,52 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
 void MyCluster::PackintoLaceWire(std::vector<ExternalWire>& ewires, std::vector<LaceWire_meshlet>& meshlets, std::map<int, int>& dual2idx)
 {
     std::map<std::array<int, 4>, int> wire4idx2id;
+
+    int extcnt = 0;
     //可能可以在这里处理掉许多corner case
+    for(const auto&wireloop:lacewires)
+        for (const auto& wire : wireloop.wires) {
+            std::array<int, 4> temp = packvec2array(wire);
+            if (wire4idx2id.find(temp) == wire4idx2id.end()) {
+                ExternalWire ewire;
+                for (const auto& elem : wire)ewire.wire.push_back(elem);
+                ewires.push_back(ewire);
+                wire4idx2id[temp] = extcnt++;
+            }
+        }
 
+    int meshletcnt = 0;
+    for(int i=0;i<dualnodes.size();i++)
+        if (dualnodes[i].version != -1) {
+            LaceWire_meshlet lwmeshlet;
+            for (const auto& wire : lacewires[i].wires) 
+                lwmeshlet.externalwireids.push_back(wire4idx2id[packvec2array(wire)]);
+            for (const auto& elem : dualnodes[i].faces)
+                lwmeshlet.faces.insert(elem);
+            for (const auto& elem : adj_graph[i])
+                lwmeshlet.adj_nodes.insert(elem.first);
+            for (const auto& elem : dualnodes[i].vertices)
+                lwmeshlet.vertexs.insert(elem);
 
+            lwmeshlet.facenum = lwmeshlet.faces.size();
+            lwmeshlet.vertexnum = lwmeshlet.vertexs.size();
+            meshlets.push_back(lwmeshlet);
+            dual2idx[i] = meshletcnt++;
+        }
+    //处理有包围情况的meshlet的external wire
+    for (auto& id : lateaddress) {
+        if (vertexsets[id].surrounded == 1) {
+            if (vertexsets[id].cornerset.size() != 0)std::cout << "error lateaddress sur ==1" << std::endl;
+            //先处理lacewires[i]
+            int adjid = (adj_graph[id].begin())->first;
+            int meshletid = dual2idx[id];
+            int adjmeshletid = dual2idx[adjid];
+            meshlets[adjmeshletid].externalwireids.push_back(meshlets[meshletid].externalwireids[0]);
+        }
+    }
 }
+
+
 
 void MyCluster::BuildDualNodes(const MyMesh& mesh)
 {
@@ -465,6 +507,15 @@ EvaluateElem MyCluster::RefreshElem(const EvaluateElem& elem1, const EvaluateEle
     res.gamma = res.diameter * res.diameter * (0.25 * REVERSEPI) / (res.area);
 
     return res;
+}
+
+std::array<int, 4> MyCluster::packvec2array(const std::vector<int>& wire)
+{
+    std::array<int, 4> temp;
+    temp[0] = wire[0]; temp[1] = wire[1];
+    int lastid = wire.size() - 1;
+    temp[3] = wire[lastid]; temp[2] = wire[lastid - 1];
+    return temp;
 }
 
 

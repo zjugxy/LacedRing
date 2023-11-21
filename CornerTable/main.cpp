@@ -7,7 +7,7 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"Viewer/viewer.h"
 #include"ClusteringALgotithm.h"
 #include"MyCluster.h"
-
+#include"LaceWireGenerator.h"
 bool meshletexist = false;
 std::string meshletfilename;
 
@@ -15,7 +15,7 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/wtbunny.obj";
+    std::string filename = "E:/OpenMesh/sphere.obj";
     // generate vertices
     try
     {
@@ -44,6 +44,11 @@ int main()
         MyCluster clu(mesh, 64, 126, 0.5);
         meshlets = clu.oldmeshlets;
         writeVectorToFile(meshlets, meshletfilename);
+
+        LaceWireGenerator lwgen;
+        clu.PackintoLaceWire(lwgen.Ewires, lwgen.meshlets, lwgen.Dual2idx);
+
+
    // }
 
     //int dd = 0;

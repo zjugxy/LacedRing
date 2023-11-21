@@ -54,26 +54,28 @@ struct LWIDarray {
 
 struct ExternalWire
 {
-	std::vector<uint> left;
-	std::vector<uint> right;
-	std::vector<vec3> geoinfo;
+	std::vector<short> left;
+	std::vector<short> right;
+	std::vector<uint> wire;
 };
 
 struct InternalWire
 {
-	std::vector<uint> left;
-	std::vector<uint> right;
-	std::vector<vec3> geoinfo;
+	std::vector<short> left;
+	std::vector<short> right;
+	std::vector<uint> wire;
 };
 
 struct LaceWire_meshlet {
 	std::vector<uint> externalwireids;
 	InternalWire interwire;
 	std::vector<short> externalLR;
+	std::vector<uint> irregular;
 
-	std::set<int> faces;
-	std::set<int> vertexs;
-	std::set<int> adj_nodes;
+
+	std::set<uint> faces;
+	std::set<uint> vertexs;
+	std::set<uint> adj_nodes;
 
 	int vertexnum;
 	int facenum;
