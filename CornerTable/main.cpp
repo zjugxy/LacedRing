@@ -76,6 +76,9 @@ int main()
         myscene.LoadLaceWire(mesh,clu);
         //myscene.LoadLacePoint(mesh, clu);
         myscene.LoadSCMeshlet(mesh, meshlets);
+        myscene.LoadInternalWire(mesh, lwgen);
+
+
         myview.set(&myscene);
         myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
         myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
