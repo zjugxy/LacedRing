@@ -425,9 +425,9 @@ double MyCluster::EvaluateCost(int id1, int id2)
     double d = -n.transpose().dot(b) / c;
 
     double Efit =  ((n.transpose().eval() * A).dot(n) + 2 * d * n.transpose().eval().dot(b)) / c + d * d ;
-    return Efit + alphas * Eshape ;
-    //double addelem = dualnodes[id1].num_face + dualnodes[id2].num_face;
-    //return Efit + alphas * Eshape  + (addelem/max_face)*(addelem/max_face);
+    //return Efit + alphas * Eshape ;
+    double addelem = dualnodes[id1].num_face + dualnodes[id2].num_face;
+    return Efit + alphas * Eshape  + (addelem/max_face)*(addelem/max_face);
 }
 
 int MyCluster::VertexOccurCnt(int vertexid, int dualnodeid) const

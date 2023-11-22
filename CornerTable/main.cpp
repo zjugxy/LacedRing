@@ -48,6 +48,7 @@ int main()
         LaceWireGenerator lwgen;
         clu.PackintoLaceWire(lwgen.Ewires, lwgen.meshlets, lwgen.Dual2idx);
 
+        lwgen.InternalWireGeneraotr(mesh);
 
    // }
 
