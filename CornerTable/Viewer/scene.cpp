@@ -122,6 +122,26 @@ namespace glfwviewer {
 
     }
 
+    void Scene::LoadLaceWire(const LaceWireGenerator& lwn,const MyMesh& mesh)
+    {
+
+        glGenVertexArrays(1, &lineobj.VAO);
+        glGenBuffers(1, &lineobj.VBO);
+        glGenBuffers(1, &lineobj.EBO);
+
+        uint i = 0;
+        for (const auto& wire : lwn.Ewires) {
+            for (const auto& elem : wire.wire) {
+                auto vh = mesh.vertex_handle(elem);
+                auto pnt = mesh.point(vh);
+                lineobj.geoinfo.emplace_back(pnt[0], pnt[1], pnt[2]);
+                lineobj.indices.push_back(i++);
+            }
+            lineobj.indices.push_back(0xffffffff);
+        }
+
+    }
+
     void Scene::LoadLacePoint(const MyMesh& mesh, const MyCluster& clu)
     {
         const std::vector<VertexSet> vsetref = clu.vertexsets;

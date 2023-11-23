@@ -50,18 +50,7 @@ int main()
 
         lwgen.InternalWireGeneraotr(mesh);
 
-   // }
 
-    //int dd = 0;
-    //for (const auto& meshlet : meshlets) {
-    //    dd += meshlet.size();
-    //}
-    //std::cout << "total face in meshlets " << dd << std::endl;
-    //std::cout << "total face in mesh" << mesh.n_faces() << std::endl;
-    //
-
-
-    //渲染hamiltoniancycle环，需要设置geometryshader中的faceidtocolor数组大小
     {
         glfwviewer::Viewer myview;
         myview.initGLFW();
@@ -70,21 +59,20 @@ int main()
         //myscene.LoadTSMeshlet(mesh, meshlets);
         myscene.LoadCornerTable(mesh);
 
-        /*
-        need edit following three line
-        */
-        myscene.LoadLaceWire(mesh,clu);
-        //myscene.LoadLacePoint(mesh, clu);
-        myscene.LoadSCMeshlet(mesh, meshlets);
+
+        //myscene.LoadSCMeshlet(mesh, meshlets);
 
         myscene.LoadSimpleWireMeshlet(lwgen);
-
         myscene.LoadInternalWire(mesh, lwgen);
-
+        //myscene.LoadLaceWire(mesh, clu);
+        myscene.LoadLaceWire(lwgen,mesh);
 
         myview.set(&myscene);
+        //myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
         myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
+
         myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
+
         while (!glfwWindowShouldClose(myview.MYwindow()))
         {
             myview.processinput();
@@ -92,12 +80,12 @@ int main()
             /*
             need edit to ust different meshlets type
             */
-            myview.RenderSCML();
-            //myview.RenderWirePnt();
-            //myview.RenderSWML();
+            //myview.RenderSCML();
+
+            myview.RenderSWML();
 
             myview.RenderWireLine();
-            myview.RenderInterWire();
+            //myview.RenderInterWire();
 
 
             glfwSwapBuffers(myview.MYwindow());

@@ -22,12 +22,13 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 		//生成单个meshlet内部的internal wire
 		cntid++;
 
+		if (cntid == 72)
+			std::cout << "the external wireid is wrong" << std::endl;
+
 		std::unordered_set<uint> boundvset;
 		for (auto& id : meshlet.externalwireids)
 			for (auto& elem : Ewires[id].wire)
 				boundvset.insert(elem);
-
-		std::vector<uint> interidxseq;
 		//
 		meshlet.externalLR.resize(meshlet.externalwireids.size());
 		for (auto& elem : meshlet.externalLR)elem = NOTINI;
@@ -130,6 +131,9 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 			for (auto& id : meshlet.externalwireids)
 				for (int i = 0; i < Ewires[id].wire.size() - 1; i++)
 					gloidx2idx[Ewires[id].wire[i]] = mapidx++;
+
+			if (gloidx2idx.size() != meshlet.vertexnum)
+				std::cout << "eroor in map" << std::endl;
 
 			std::set<uint> facestoremove = meshlet.faces;
 
@@ -302,9 +306,15 @@ void LaceWireGenerator::LevelWireGenerator( LaceWire_meshlet& meshlet, const MyM
 		for (auto& elem : wire)
 			meshlet.interwire.wire.push_back(elem);
 		meshlet.interwire.wire.push_back(NEXTWIRE);
-
-
 	}
+
+	int cnt = boundset.size();
+	for (auto& wire : internalwires)
+		cnt += wire.size();
+	if (cnt != meshlet.vertexnum)
+		std::cout << "Error in internal wire generta" << std::endl;
+
+
 	std::cout << "line num of meshlet id   " << internalwires.size();
 }
 
@@ -414,13 +424,19 @@ void LaceWireGenerator::PackIntoGPUSimple(const MyMesh& mesh)
 			vertexcnt++;
 		}
 
-		for(const auto& id:meshlet.externalwireids)
-			for(const auto&elem:Ewires[id].wire) {
+		for (const auto& id : meshlet.externalwireids) {
+			for (const auto& elem : Ewires[id].wire) {
 				const auto& vh = mesh.vertex_handle(elem);
 				auto pnt = mesh.point(vh);
-				geoinfo.emplace_back(pnt[0], pnt[1], pnt[2],1.0f);
+				geoinfo.emplace_back(pnt[0], pnt[1], pnt[2], 1.0f);
 				vertexcnt++;
 			}
+			geoinfo.pop_back();
+			vertexcnt--;
+		}
+
+		if (vertexcnt != meshlet.vertexnum)
+			std::cout << "error in pack geoinfo" << std::endl;
 		
 		for (uint i = 0; i < meshlet.interwire.left.size() - 1; i++) {
 			if (meshlet.interwire.wire[i] == NEXTWIRE)continue;

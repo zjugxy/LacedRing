@@ -180,6 +180,8 @@ namespace glfwviewer {
 		void LoadCornerTable(const CornerTable& ct);
 		void LoadLR(const MyLR& lr);
 		void LoadLaceWire(const MyMesh& mesh,const MyCluster& clu);
+		void LoadLaceWire(const LaceWireGenerator& lwn,const MyMesh& mesh);
+
 		void LoadLacePoint(const MyMesh& mesh, const MyCluster& clu);
 		void LoadInternalWire(const MyMesh& mesh ,const LaceWireGenerator& lwn);
 

@@ -1,5 +1,24 @@
 1.所有face初始化为dualnodetype
 
+
+
+
+
+
+
+1.检查一下 lwn中间的Ewires 在使用这个SCmeshlet渲染的时候对不对
+
+
+
+
+
+
+
+
+
+
+
+
 faceidx --> meshletidx --> dualtype
 
 # tradeoff
