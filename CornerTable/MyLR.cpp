@@ -150,31 +150,7 @@ MyLR::MyLR(const CornerTable& ct)
 		}
 	}
 
-	//check by vertice idx
 
-	//for (int i = 0; i < vertices.size(); i++) {
-	//	//check left
-	//	int leftid;
-	//	ParseLeft(LeftTable[i], leftid);
-	//	int sumleft = i + (i + 1) % mring + leftid;
-	//	int ctleftid = ct.RingLeftCorners[i];
-	//	sumleft  -=  ctv2lrv[ct.Vertex(ctleftid)] + 
-	//		ctv2lrv[ct.Vertex(ct.Prev(ctleftid))] +
-	//		ctv2lrv[ct.Vertex(ct.Next(ctleftid))];
-	//	if (sumleft != 0)
-	//		std::cout << "debug in lr" << std::endl;
-
-	//	//check right
-	//	int rightid;
-	//	ParseRight(RightTable[i], rightid);
-	//	int sumright = i + (i + 1) % mring + rightid;
-	//	int ctrightid = ct.RingRightCorners[i];
-	//	sumright -= ctv2lrv[ct.Vertex(ctrightid)] +
-	//		ctv2lrv[ct.Vertex(ct.Prev(ctrightid))] +
-	//		ctv2lrv[ct.Vertex(ct.Next(ctrightid))];
-	//	if (sumleft != 0)
-	//		std::cout << "debug in lr" << std::endl;
-	//}
 
 
 	//check

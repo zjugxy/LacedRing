@@ -173,8 +173,10 @@
     <None Include="fragshader.glsl" />
     <None Include="geometryshader.glsl" />
     <None Include="IXmeshshader.glsl" />
+    <None Include="Lacemeshshader.glsl" />
     <None Include="ringfrag.glsl" />
     <None Include="ringvertex.glsl" />
+    <None Include="SimpleLaceWiremeshshader.glsl" />
     <None Include="TSfragshader.glsl" />
     <None Include="TSmeshshader.glsl" />
     <None Include="vertexshader.glsl" />

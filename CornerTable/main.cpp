@@ -76,11 +76,14 @@ int main()
         myscene.LoadLaceWire(mesh,clu);
         //myscene.LoadLacePoint(mesh, clu);
         myscene.LoadSCMeshlet(mesh, meshlets);
+
+        myscene.LoadSimpleWireMeshlet(lwgen);
+
         myscene.LoadInternalWire(mesh, lwgen);
 
 
         myview.set(&myscene);
-        myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
+        myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
         myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
         while (!glfwWindowShouldClose(myview.MYwindow()))
         {
@@ -91,7 +94,11 @@ int main()
             */
             myview.RenderSCML();
             //myview.RenderWirePnt();
+            //myview.RenderSWML();
+
             myview.RenderWireLine();
+            myview.RenderInterWire();
+
 
             glfwSwapBuffers(myview.MYwindow());
             glfwPollEvents();

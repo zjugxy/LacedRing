@@ -127,6 +127,12 @@
     <None Include="ringfrag.glsl">
       <Filter>shaders\Lineshader</Filter>
     </None>
+    <None Include="Lacemeshshader.glsl">
+      <Filter>shaders\Meshshader</Filter>
+    </None>
+    <None Include="SimpleLaceWiremeshshader.glsl">
+      <Filter>shaders\Meshshader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.md" />

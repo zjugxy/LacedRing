@@ -40,6 +40,8 @@ struct SC_meshlet {
 
 };
 
+using Simple_meshlet = SC_meshlet;
+
 void SC_meshletLoad(std::vector<SC_meshlet>& loader, MyMesh mesh, Meshlets meshlets, std::vector<vec4>& geoinfo, std::vector<int>& primidx);
 
 struct LW_meshlet
@@ -70,7 +72,7 @@ struct LaceWire_meshlet {
 	std::vector<uint> externalwireids;
 	InternalWire interwire;
 	std::vector<short> externalLR;
-	std::vector<uint> irregular;
+	std::vector<short> irregular;
 
 
 	std::set<uint> faces;

@@ -146,6 +146,30 @@ namespace glfwviewer {
 
     }
 
+    void Scene::LoadInternalWire(const MyMesh& mesh, const LaceWireGenerator& lwn)
+    {
+        int idxcnt = 0;
+        for (const auto& meshlet : lwn.meshlets) {
+            for (const auto& elem : meshlet.interwire.wire) {
+                if (elem == 0xFFFFFFFF) {
+                    interobj.indices.push_back(0xffffffff);
+                    continue;
+                }
+                else {
+                    auto vh = mesh.vertex_handle(elem);
+                    auto pnt = mesh.point(vh);
+                    interobj.geoinfo.emplace_back(pnt[0], pnt[1], pnt[2]);
+                    interobj.indices.push_back(idxcnt++);
+                }
+            }
+            interobj.indices.push_back(0xffffffff);
+        }
+        glGenVertexArrays(1, &interobj.VAO);
+        glGenBuffers(1, &interobj.VBO);
+        glGenBuffers(1, &interobj.EBO);
+
+    }
+
     void Scene::LoadTSMeshlet(MyMesh mesh, Meshlets meshlets)
     {
         TS_MeshletLoad(tsobj.tsmeshlets, mesh, meshlets, tsobj.tsgeoinfo);
@@ -229,6 +253,32 @@ namespace glfwviewer {
 
     }
 
+    void Scene::LoadSimpleWireMeshlet(const LaceWireGenerator& lwn)
+    {
+        swobj.swgeoinfo = &lwn.geoinfo;
+        swobj.swprimidx = &lwn.priminfo;
+        swobj.simplemeshlets = &lwn.simplemeshlets;
+
+        glGenBuffers(1, &swobj.SWGEO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, swobj.SWGEO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, swobj.swgeoinfo->size() * sizeof(vec4), swobj.swgeoinfo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, swobj.SWGEO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        //PRIM info
+        glGenBuffers(1, &swobj.SWPRIM);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, swobj.SWPRIM);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, swobj.swprimidx->size() * sizeof(unsigned char), swobj.swprimidx->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, swobj.SWPRIM);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+        //meshlet info
+        glGenBuffers(1, &swobj.SWMESHLET);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, swobj.SWMESHLET);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, swobj.simplemeshlets->size() * sizeof(Simple_meshlet), swobj.simplemeshlets->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, swobj.SWMESHLET);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    }
+
 
     void Scene::renderCT() {
 
@@ -284,6 +334,21 @@ namespace glfwviewer {
         glDrawElements(GL_LINE_STRIP, lineobj.indices.size(), GL_UNSIGNED_INT, 0);
     }
 
+    void Scene::renderInterWire()
+    {
+        glBindVertexArray(interobj.VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, interobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * interobj.geoinfo.size(), interobj.geoinfo.data(), GL_DYNAMIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX);
+        glLineWidth(10.0f);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, interobj.EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, interobj.indices.size() * sizeof(uint), interobj.indices.data(), GL_DYNAMIC_DRAW);
+        glDrawElements(GL_LINE_STRIP, interobj.indices.size(), GL_UNSIGNED_INT, 0);
+    }
+
     void Scene::renderWirePnt()
     {
         glBindVertexArray(pntobj.VAO);
@@ -308,6 +373,13 @@ namespace glfwviewer {
     void Scene::renderSCML()
     {
         glDrawMeshTasksNV(0, scobj.scmeshlets.size());
+    }
+
+    void Scene::renderSWML()
+    {
+        glDisable(GL_CULL_FACE);
+        glDrawMeshTasksNV(0, swobj.simplemeshlets->size());
+
     }
 
 

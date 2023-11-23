@@ -8,6 +8,8 @@
 #include"../MyLR.h"
 #include"../Meshlet.h"
 #include"../MyCluster.h"
+
+#include"../LaceWireGenerator.h"
 namespace glfwviewer {
 
 	class BoundingSphere
@@ -125,6 +127,26 @@ namespace glfwviewer {
 		std::vector<vec3> geoinfo;
 	};
 
+	struct SceneRenderInterWire {
+		GLuint VAO;
+		GLuint VBO;
+		GLuint EBO;
+		std::vector<uint> indices;
+		std::vector<vec3> geoinfo;
+	};
+
+	struct SceneRenderSimpleWire
+	{
+		const std::vector<Simple_meshlet>* simplemeshlets;
+		const std::vector<vec4>* swgeoinfo;
+		const std::vector<unsigned char>* swprimidx;
+		GLuint SWGEO;
+		GLuint SWPRIM;
+		GLuint SWMESHLET;
+
+	};
+
+
 	class Scene
 	{
 	public:
@@ -145,6 +167,9 @@ namespace glfwviewer {
 
 		SceneRenderWireline lineobj;
 		SceneRenderWirePoint pntobj;
+		SceneRenderInterWire interobj;
+		SceneRenderSimpleWire swobj;
+
 	public:
 		Scene();
 		~Scene();
@@ -156,7 +181,8 @@ namespace glfwviewer {
 		void LoadLR(const MyLR& lr);
 		void LoadLaceWire(const MyMesh& mesh,const MyCluster& clu);
 		void LoadLacePoint(const MyMesh& mesh, const MyCluster& clu);
-		
+		void LoadInternalWire(const MyMesh& mesh ,const LaceWireGenerator& lwn);
+
 		
 		void renderML();
 		void renderCT();
@@ -164,6 +190,7 @@ namespace glfwviewer {
 		void renderLR();
 
 		void renderWireLine();
+		void renderInterWire();
 		void renderWirePnt();
 		//void renderobjs();
 
@@ -172,11 +199,13 @@ namespace glfwviewer {
 		void LoadTSMeshlet(MyMesh mesh, Meshlets meshlets);
 		void LoadIXMeshlet(MyMesh mesh, Meshlets meshlets);
 		void LoadSCMeshlet(MyMesh mesh, Meshlets meshlets);
+		void LoadSimpleWireMeshlet(const LaceWireGenerator& lwn);
 
 
 		void renderTSML();
 		void renderIXML();
 		void renderSCML();
+		void renderSWML();
 	};
 
 }
