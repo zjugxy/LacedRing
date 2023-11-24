@@ -193,8 +193,6 @@ void MyCluster::PackintoLaceWire(std::vector<ExternalWire>& ewires, std::vector<
     for(int i=0;i<dualnodes.size();i++)
         if (dualnodes[i].version != -1) {
             LaceWire_meshlet lwmeshlet;
-            if (meshletcnt == 72)
-                std::cout << "debug meshlet 72" << std::endl;
 
             for (const auto& wire : lacewires[i].wires) {
                 std::array<int, 4> temp = packvec2array(wire);

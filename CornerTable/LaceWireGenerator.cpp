@@ -18,12 +18,11 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 {
 	int cntid = -1;
 	gloidx2idxvec.resize(meshlets.size());
+	idx2glo.resize(meshlets.size());
+
 	for (auto& meshlet : meshlets) {
 		//生成单个meshlet内部的internal wire
 		cntid++;
-
-		if (cntid == 72)
-			std::cout << "the external wireid is wrong" << std::endl;
 
 		std::unordered_set<uint> boundvset;
 		for (auto& id : meshlet.externalwireids)
@@ -44,15 +43,18 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 			//external idx --> meshlet limit idx map
 
 
-
+			std::map<short, uint>& reversemap = idx2glo[cntid];
 			std::map<uint, short>& gloidx2idx = gloidx2idxvec[cntid];
 			short mapidx = 0;
 			for (auto& id : meshlet.externalwireids)
-				for (int i = 0; i < Ewires[id].wire.size() - 1; i++)
-					gloidx2idx[Ewires[id].wire[i]] = mapidx++;
-
+				for (int i = 0; i < Ewires[id].wire.size(); i++)
+					if (gloidx2idx.find(Ewires[id].wire[i]) == gloidx2idx.end()) {
+						reversemap[mapidx] = Ewires[id].wire[i];
+						gloidx2idx[Ewires[id].wire[i]] = mapidx++;
+					}
 
 			int orderofid = 0;
+			std::set<uint> facestoremove = meshlet.faces;
 			//对于一条wire只需要存储 wire.size()-1 个 left right corner
 			for (auto& id : meshlet.externalwireids) {
 				short LorR = NOTINI;
@@ -60,23 +62,31 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 				for (int i = 0; i < Ewires[id].wire.size() - 1; i++) {
 					uint startidx = Ewires[id].wire[i];
 					uint endidx = Ewires[id].wire[i + 1];
-					short idx = FindLeftOrRightIDX_VERSION0(startidx, endidx, meshlet, mesh, gloidx2idx, LorR);
+					short idx = FindLeftOrRightIDX_VERSION0(startidx, endidx, meshlet, mesh, gloidx2idx, LorR,facestoremove);
 					if (lrref[orderofid] == NOTINI)lrref[orderofid] = LorR;
 					else if (lrref[orderofid] != LorR)std::cout << "error in find left or Right" << std::endl;
 
 					if (LorR == RIGHT)Ewires[id].right.push_back(idx);
 					else Ewires[id].left.push_back(idx);
 				}
+				//让ewires内的三个数组长度保持一致
 				if (LorR == RIGHT)Ewires[id].right.push_back(EXTERNALWIREEND);
 				else Ewires[id].left.push_back(EXTERNALWIREEND);
 				orderofid++;
 			}
 
+			if (!facestoremove.empty()) {
+				std::cout << "irregular face num" << facestoremove.size() << std::endl;
+				meshlet.irregular.push_back(facestoremove.size());
+				for (auto& faceid : facestoremove) {
+					auto fh = mesh.face_handle(faceid);
+					for (const auto& vh : mesh.fv_ccw_range(fh))
+						meshlet.irregular.push_back(gloidx2idx[vh.idx()]);
+				}
+			}
+
 		}
 		else if ((boundvset.size() + 1) == meshlet.vertexnum) {
-			//从startidx开始build loop
-			//看论文吧
-
 
 			for (auto& ver : meshlet.vertexs)
 				if (boundvset.find(ver) == boundvset.end()) {
@@ -85,13 +95,21 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 				}
 			//map映射
 			std::map<uint, short>& gloidx2idx = gloidx2idxvec[cntid];
+			std::map<short, uint>& reversemap = idx2glo[cntid];
+
+
 			short mapidx = 0;
+			reversemap[mapidx] = meshlet.interwire.wire[0];
 			gloidx2idx[meshlet.interwire.wire[0]] = mapidx++;
+
 			for (auto& id : meshlet.externalwireids)
-				for (int i = 0; i < Ewires[id].wire.size() - 1; i++)
-					gloidx2idx[Ewires[id].wire[i]] = mapidx++;
+				for (int i = 0; i < Ewires[id].wire.size(); i++)
+					if (gloidx2idx.find(Ewires[id].wire[i]) == gloidx2idx.end()) {
+						reversemap[mapidx] = Ewires[id].wire[i];
+						gloidx2idx[Ewires[id].wire[i]] = mapidx++;
+					}
 
-
+			std::set<uint> facestoremove = meshlet.faces;
 			int orderofid = 0;
 			for (auto& id : meshlet.externalwireids) {
 				short LorR = NOTINI;
@@ -99,7 +117,7 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 				for (int i = 0; i < Ewires[id].wire.size() - 1; i++) {
 					uint startidx = Ewires[id].wire[i];
 					uint endidx = Ewires[id].wire[i + 1];
-					short idx = FindLeftOrRightIDX_VERSION0(startidx, endidx, meshlet, mesh, gloidx2idx, LorR);
+					short idx = FindLeftOrRightIDX_VERSION0(startidx, endidx, meshlet, mesh, gloidx2idx, LorR, facestoremove);
 					if (lrref[orderofid] == NOTINI)lrref[orderofid] = LorR;
 					else if (lrref[orderofid] != LorR)std::cout << "error in find left or Right" << std::endl;
 
@@ -110,29 +128,38 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 				else Ewires[id].left.push_back(EXTERNALWIREEND);
 				orderofid++;
 			}
+
+			if (!facestoremove.empty()) {
+				std::cout << "irregular face num" << facestoremove.size() << std::endl;
+				meshlet.irregular.push_back(facestoremove.size());
+				for (auto& faceid : facestoremove) {
+					auto fh = mesh.face_handle(faceid);
+					for (const auto& vh : mesh.fv_ccw_range(fh))
+						meshlet.irregular.push_back(gloidx2idx[vh.idx()]);
+				}
+			}
 		}
 		else {
-			//find start cycle vertex
-
-			//first elem vertexidx second elem halfedge idx
-
-			//根据论文生成的并不是一个环，而是一条线
-			//interlacewire(interwire, mesh, meshlet, boundvset);
 
 			LevelWireGenerator(meshlet, mesh, boundvset);
 			std::cout << ' ' << cntid << std::endl;
 
-
 			std::map<uint, short>& gloidx2idx = gloidx2idxvec[cntid];
+			std::map<short, uint>& reversemap = idx2glo[cntid];
+
 			short mapidx = 0;
 			for (auto& elem : meshlet.interwire.wire)
-				if (elem != NEXTWIRE)
+				if (elem != NEXTWIRE) {
+					reversemap[mapidx] = elem;
 					gloidx2idx[elem] = mapidx++;
+				}
 
 			for (auto& id : meshlet.externalwireids)
 				for (int i = 0; i < Ewires[id].wire.size(); i++)
-					if(gloidx2idx.find(Ewires[id].wire[i])==gloidx2idx.end())
+					if (gloidx2idx.find(Ewires[id].wire[i]) == gloidx2idx.end()) {
+						reversemap[mapidx] = Ewires[id].wire[i];
 						gloidx2idx[Ewires[id].wire[i]] = mapidx++;
+					}
 
 			if (gloidx2idx.size() != meshlet.vertexnum) {
 				std::cout << "eroor in map" << std::endl;
@@ -173,7 +200,7 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 			std::vector<uint> wireref = meshlet.interwire.wire;
 			meshlet.interwire.left.resize(wireref.size());
 			meshlet.interwire.right.resize(wireref.size());
-			for (int wireid = 0; wireid < wireref.size(); wireid++) {
+			for (int wireid = 0; wireid < wireref.size()-1; wireid++) {
 				if (wireref[wireid] == NEXTWIRE)continue;
 				if (wireref[wireid + 1] == NEXTWIRE)continue;
 
@@ -185,6 +212,7 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 			}
 
 			if (!facestoremove.empty()) {
+				std::cout << "irregular face num" << facestoremove.size() << std::endl;
 				meshlet.irregular.push_back(facestoremove.size());
 				for (auto& faceid : facestoremove) {
 					auto fh = mesh.face_handle(faceid);
@@ -205,7 +233,7 @@ LaceWireGenerator::LaceWireGenerator()
 
 
 //这个version只适用于没有internal pnt的情况
-short LaceWireGenerator::FindLeftOrRightIDX_VERSION0(uint start, uint end, const LaceWire_meshlet& meshlet, const MyMesh& mesh, std::map<uint, short>& idxmap, short& leftorRight)
+short LaceWireGenerator::FindLeftOrRightIDX_VERSION0(uint start, uint end, const LaceWire_meshlet& meshlet, const MyMesh& mesh, std::map<uint, short>& idxmap, short& leftorRight, std::set<uint>& facestoremove)
 {
 	OpenMesh::VertexHandle vh0(start);
 
@@ -218,6 +246,7 @@ short LaceWireGenerator::FindLeftOrRightIDX_VERSION0(uint start, uint end, const
 			if (meshlet.faces.find(faceid) != meshlet.faces.end()) {
 				uint idx = it->next().to().idx();
 				leftorRight = LEFT;
+				facestoremove.erase(faceid);
 				return idxmap[idx];
 			}
 			else {
@@ -226,6 +255,8 @@ short LaceWireGenerator::FindLeftOrRightIDX_VERSION0(uint start, uint end, const
 				if (meshlet.faces.find(faceid) == meshlet.faces.end())std::cout << "error" << std::endl;
 				uint idx = it->opp().next().to().idx();
 				leftorRight = RIGHT;
+				facestoremove.erase(faceid);
+
 				return idxmap[idx];
 			}
 			break;
@@ -415,57 +446,50 @@ void LaceWireGenerator::PackIntoGPUSimple(const MyMesh& mesh)
 	std::mt19937 gen(rd());
 	std::uniform_real_distribution<float> dis(0.0, 1.0);
 
+	
+
 	for (const auto& meshlet : meshlets) {
 		//geoinfo
 		cntid++;
 		uint vertexcnt = 0;
 
 		std::map<uint, short>& mapref = gloidx2idxvec[cntid];
-		for (const auto& elem : meshlet.interwire.wire) {
-			if (elem == NEXTWIRE)continue;
-			const auto& vh = mesh.vertex_handle(elem);
-			auto pnt = mesh.point(vh);
-			geoinfo.emplace_back(pnt[0], pnt[1], pnt[2],1.0f);
-			vertexcnt++;
-		}
 
-		for (const auto& id : meshlet.externalwireids) {
-			for (const auto& elem : Ewires[id].wire) {
-				const auto& vh = mesh.vertex_handle(elem);
+		for (auto& elem : idx2glo[cntid]) {
+				const auto& vh = mesh.vertex_handle(elem.second);
 				auto pnt = mesh.point(vh);
-				geoinfo.emplace_back(pnt[0], pnt[1], pnt[2], 1.0f);
+				geoinfo.emplace_back(pnt[0], pnt[1], pnt[2],1.0f);
 				vertexcnt++;
-			}
-			geoinfo.pop_back();
-			vertexcnt--;
 		}
 
 		if (vertexcnt != meshlet.vertexnum)
 			std::cout << "error in pack geoinfo" << std::endl;
-		
-		for (uint i = 0; i < meshlet.interwire.left.size() - 1; i++) {
-			if (meshlet.interwire.wire[i] == NEXTWIRE)continue;
-			if (meshlet.interwire.wire[i + 1] == NEXTWIRE)continue;
-			uint leftidx = meshlet.interwire.left[i];
-			uint rightidx = meshlet.interwire.right[i];
-			uint elem = meshlet.interwire.wire[i];
-			uint elemadd = meshlet.interwire.wire[i + 1];
-			priminfo.push_back((unsigned char)mapref[elem]);
-			priminfo.push_back((unsigned char)mapref[elemadd]);
-			priminfo.push_back((unsigned char)leftidx);
 
-			priminfo.push_back((unsigned char)mapref[elemadd]);
-			priminfo.push_back((unsigned char)mapref[elem]);
-			priminfo.push_back((unsigned char)rightidx);
-		}
+		if(meshlet.interwire.wire.size()>=2)
+			for (uint i = 0; i < meshlet.interwire.left.size() - 1; i++) {
+				if (meshlet.interwire.wire[i] == NEXTWIRE)continue;
+				if (meshlet.interwire.wire[i + 1] == NEXTWIRE)continue;
+				uint leftidx = meshlet.interwire.left[i];
+				uint rightidx = meshlet.interwire.right[i];
+				uint elem = meshlet.interwire.wire[i];
+				uint elemadd = meshlet.interwire.wire[i + 1];
+				priminfo.push_back((unsigned char)mapref[elem]);
+				priminfo.push_back((unsigned char)mapref[elemadd]);
+				priminfo.push_back((unsigned char)leftidx);
 
+				priminfo.push_back((unsigned char)mapref[elemadd]);
+				priminfo.push_back((unsigned char)mapref[elem]);
+				priminfo.push_back((unsigned char)rightidx);
+			}
 
-		short irsize = meshlet.irregular[0];
-		for (int i = 0; i < irsize; i++) {
-			priminfo.push_back((unsigned char)meshlet.irregular[3 * i + 1]);
-			priminfo.push_back((unsigned char)meshlet.irregular[3 * i + 2]);
-			priminfo.push_back((unsigned char)meshlet.irregular[3 * i + 3]);
+		if (!meshlet.irregular.empty()) {
+			short irsize = meshlet.irregular[0];
+			for (int i = 0; i < irsize; i++) {
+				priminfo.push_back((unsigned char)meshlet.irregular[3 * i + 1]);
+				priminfo.push_back((unsigned char)meshlet.irregular[3 * i + 2]);
+				priminfo.push_back((unsigned char)meshlet.irregular[3 * i + 3]);
 
+			}
 		}
 
 		for (int i = 0; i < meshlet.externalwireids.size(); i++) {
@@ -493,6 +517,8 @@ void LaceWireGenerator::PackIntoGPUSimple(const MyMesh& mesh)
 
 
 
+		SimpleCheckPrimIdx(primbegin,mesh,meshlet,cntid);
+
 		Simple_meshlet temp;
 		temp.vertex_begin = vertexbegin;
 		temp.vertex_cnt = vertexcnt;
@@ -509,108 +535,39 @@ void LaceWireGenerator::PackIntoGPUSimple(const MyMesh& mesh)
 
 }
 
-//void LaceWireGenerator::Interlacewire(std::vector<std::array<uint, 2>>& wirerecord, const MyMesh& mesh, LaceWire_meshlet& meshlet, const std::unordered_set<uint>& boundset)
-//{
-//	uint starthlidx;
-//	uint startidx = FindStartVertex(meshlet, mesh, boundset, starthlidx);
-//	uint nextidx, nexthlidx;
-//	uint intervertexnum = meshlet.vertexnum - boundset.size();
-//	wirerecord.push_back(std::array<uint, 2>{ startidx, 0});
-//	meshlet.interwire.wire.push_back(startidx);
-//	std::set<uint> alreadyin{ startidx };
-//
-//	while (Internextpntsearch(mesh,boundset,startidx,starthlidx,nextidx,nexthlidx,alreadyin)) {
-//		if (meshlet.vertexs.find(nextidx) == meshlet.vertexs.end())
-//			std::cout << "error in occur outside pnts";
-//
-//		auto edgehl = mesh.halfedge_handle(nexthlidx);
-//		edgehl = mesh.prev_halfedge_handle(edgehl);
-//		edgehl = mesh.opposite_halfedge_handle(edgehl);
-//		if (mesh.to_vertex_handle(edgehl).idx() != nextidx)
-//			std::cout << "error" << std::endl;
-//		if(mesh.from_vertex_handle(edgehl).idx()!=startidx)
-//			std::cout << "error" << std::endl;
-//		std::array<uint, 2> temp;
-//		temp[0] = nextidx; temp[1] = edgehl.idx();
-//
-//
-//		wirerecord.push_back(temp);
-//		alreadyin.insert(nextidx);
-//		meshlet.interwire.wire.push_back(nextidx);
-//
-//		startidx = nextidx;
-//		starthlidx = nexthlidx;
-//
-//	}
-//
-//	if ((alreadyin.size() + boundset.size()) != meshlet.vertexnum) {
-//		std::cout << "not a full ring" << std::endl;
-//	}
-//
-//}
-//
-//bool LaceWireGenerator::Internextpntsearch(const MyMesh& mesh, const std::unordered_set<uint>& boundset, uint& startidx, uint& starthlidx, uint& nextidx, uint& nexthlidx, const std::set<uint>& pre)
-//{
-//	auto hl = mesh.halfedge_handle(starthlidx);
-//	
-//	do {
-//		hl = mesh.next_halfedge_handle(hl);
-//		hl = mesh.opposite_halfedge_handle(hl);
-//		hl = mesh.next_halfedge_handle(hl);
-//		auto vh = mesh.to_vertex_handle(hl);
-//		if (	(boundset.find(vh.idx()) == boundset.end())
-//				&&//vh.idx既不在boundset又不在preset中间
-//			(pre.find(vh.idx())==pre.end())	) {
-//			nextidx = vh.idx();
-//			nexthlidx = mesh.prev_halfedge_handle(hl).idx();
-//			return true;
-//		}
-//
-//
-//	} while (hl.idx() != starthlidx);
-//		return false;
-//}
+void LaceWireGenerator::SimpleCheckPrimIdx(int primbegin, const MyMesh& mesh, const LaceWire_meshlet& meshlet,int cntid)
+{
+	int primcnt = (priminfo.size() - primbegin) / 3;
+	std::set<std::pair<int, int>> checkpairs;
+	auto& mapref = idx2glo[cntid];
 
-//uint LaceWireGenerator::FindStartVertex(const LaceWire_meshlet& meshlet, const MyMesh& mesh, const std::unordered_set<uint>& boundset, uint& hlidx) {
-//	//第二次时出现错误
-//	for (auto& id : meshlet.externalwireids)
-//		for (int i = 0; i < Ewires[i].wire.size() - 1; i++) {
-//			int startvid = Ewires[i].wire[i];
-//			int endvid = Ewires[i].wire[i + 1];
-//
-//			OpenMesh::VertexHandle vh0(startvid);
-//
-//			OpenMesh::VertexHandle vh1(endvid);
-//
-//			for (auto it = mesh.cvoh_begin(vh0); it != mesh.cvoh_end(vh0); ++it)
-//				//找到一条边界out half edge
-//				if (it->to().idx() == endvid) {
-//					int faceid = it->face().idx();
-//
-//					//假设在start -->  end的右边
-//					if (meshlet.faces.find(faceid) != meshlet.faces.end()) {
-//						uint vidx = it->next().to().idx();
-//						if (boundset.find(vidx) == boundset.end()) {
-//							hlidx = it->idx();
-//							return vidx;
-//						}
-//						else
-//							continue;
-//					}
-//					//在左边
-//					faceid = it->opp().face().idx();
-//					if (meshlet.faces.find(faceid) == meshlet.faces.end())
-//						std::cout << "error" << std::endl;
-//					uint vidx = it->opp().next().to().idx();
-//					if (boundset.find(vidx) == boundset.end()) {
-//						hlidx = it->opp().idx();
-//						return vidx;
-//					}
-//					else
-//						continue;
-//				}
-//
-//		}
-//	return NOINTERNALVERTEX;
-//
-//}
+	for (const auto& face : meshlet.faces) {
+		int sum = 0;
+		int start = 1;
+		auto facehandle = mesh.face_handle(face);
+		for (MyMesh::ConstFaceVertexIter fv_it(mesh, facehandle); fv_it.is_valid(); ++fv_it)
+		{
+			MyMesh::VertexHandle vh = *fv_it; 
+			sum += vh.idx(); start *= vh.idx();
+		}
+		checkpairs.insert(std::pair<int, int>{sum, start});
+	}
+
+	for (int i = primbegin; i < priminfo.size(); i += 3) {
+		uint v0 = mapref[short(priminfo[i])];
+		uint v1 = mapref[short(priminfo[i+1])];
+		uint v2 = mapref[short(priminfo[i+2])];
+
+		auto temp = std::pair<int, int>{ v0 + v1 + v2, v0 * v1 * v2 };
+
+		checkpairs.erase(temp);
+
+	}
+	if (!checkpairs.empty()) {
+		int num = meshlet.interwire.wire.size();
+		std::cout << std::endl<<"internal wire size"<<num << " error occur miss" << std::endl;//我的prim不包含所有的三角形
+	}
+	
+
+}
+

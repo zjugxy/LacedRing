@@ -4,7 +4,7 @@
 #define GROUP_SIZE 32
 
 layout(local_size_x=GROUP_SIZE) in;
-layout(max_vertices=64, max_primitives=200) out;
+layout(max_vertices=64, max_primitives=150) out;
 layout(triangles) out;
 
 

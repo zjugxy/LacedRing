@@ -17,7 +17,7 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/sphere.obj";
+    std::string filename = "E:/OpenMesh/wtbunny.obj";
     // generate vertices
     try
     {
@@ -42,11 +42,9 @@ int main()
 
     std::cout <<"face num:" << mesh.n_faces() << std::endl<<"vert num:" << mesh.n_vertices() << std::endl <<"halfedge :" << mesh.n_halfedges() << std::endl;
     
-   // if (meshletexist == false) {
+
         MyCluster clu(mesh, 64, 126, 0.5);
         meshlets = clu.oldmeshlets;
-        //writeVectorToFile(meshlets, meshletfilename);
-
         LaceWireGenerator lwgen;
         clu.PackintoLaceWire(lwgen.Ewires, lwgen.meshlets, lwgen.Dual2idx);
         lwgen.InternalWireGeneraotr(mesh);
@@ -57,9 +55,10 @@ int main()
         glfwviewer::Scene myscene;
         myscene.LoadCornerTable(mesh);
 
-        if (1) {
+        if (0) {
             myscene.LoadSCMeshlet(mesh, meshlets);
             //myscene.LoadInternalWire(mesh, lwgen);
+            //myscene.LoadLaceWire(mesh, clu);
             myscene.LoadLaceWire(lwgen, mesh);
             myview.set(&myscene);
             myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
@@ -70,7 +69,7 @@ int main()
                 myview.processinput();
                 myview.RenderSCML();
                 myview.RenderWireLine();
-                myview.RenderInterWire();
+                //myview.RenderInterWire();
                 glfwSwapBuffers(myview.MYwindow());
                 glfwPollEvents();
             }
@@ -80,7 +79,7 @@ int main()
         else {
 
             myscene.LoadSimpleWireMeshlet(lwgen);
-            myscene.LoadInternalWire(mesh, lwgen);
+            //myscene.LoadInternalWire(mesh, lwgen);
             //myscene.LoadLaceWire(mesh, clu);
             myscene.LoadLaceWire(lwgen, mesh);
             myview.set(&myscene);
@@ -92,7 +91,7 @@ int main()
                 myview.processinput();
                 myview.RenderSWML();
                 myview.RenderWireLine();
-                myview.RenderInterWire();
+                //myview.RenderInterWire();
                 glfwSwapBuffers(myview.MYwindow());
                 glfwPollEvents();
             }
