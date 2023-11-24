@@ -84,6 +84,8 @@ private:
 	std::array<int, 4> packvec2array(const std::vector<int>& vec);
 
 	void LoadVertexset2Wire(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
+	void LoadVertexset2WireVersion2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
+
 	void LoadWiresur2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
 	void LoadSingleLoop(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
 

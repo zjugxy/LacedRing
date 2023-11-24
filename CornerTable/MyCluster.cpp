@@ -126,7 +126,7 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
             LaceWires temp;
             temp.dualid = i;
             {
-                if(i==1570)
+                if(i==2590)
                     std::cout << "debug　" << i << std::endl;
                 if (vertexsets[i].surrounded != 0) {
                     lateaddress.push_back(i);
@@ -139,17 +139,7 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
         }
     }
 
-    //for (auto& id : lateaddress) {
-    //    int adjid = (adj_graph[id].begin())->first;
-    //    LaceWires temp;
-    //    temp.dualid = id;
-    //    LoadSingleLoop(temp, vertexsets[id], mesh);
-    //    lacewires.push_back(temp);
-    //    for(auto&elem:lacewires)
-    //        if (elem.dualid == adjid) {
-    //            elem.wires.push_back(temp.wires[0]);
-    //        }
-    //}
+
     for (auto& id : lateaddress) {
         if (vertexsets[id].surrounded == 1) {
             if (vertexsets[id].cornerset.size() != 0)std::cout << "error lateaddress sur ==1" << std::endl;
@@ -163,14 +153,15 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
         }
     }
 
-    //for (auto& id : lateaddress) {
-    //    if (vertexsets[id].surrounded == 2) {
-    //        LaceWires& temp = lacewires[id];
-    //        temp.dualid = id;
-    //        if(temp.wires.size()==0)std::cout << "error lateaddress sur==2" << std::endl;
-    //        LoadWiresur2(temp, vertexsets[id], mesh);
-    //    }
-    //}
+    for (auto& id : lateaddress) {
+        if (vertexsets[id].surrounded == 2) {
+            //lacewires[id]其中的wires已经被一部分初始化了
+            LaceWires& temp = lacewires[id];
+            if (temp.wires.size() == 0)std::cout << "error may occur in wire surround others" << std::endl;
+            LoadVertexset2WireVersion2(temp, vertexsets[id], mesh);
+
+        }
+    }
 
 
 }
@@ -178,7 +169,7 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
 void MyCluster::PackintoLaceWire(std::vector<ExternalWire>& ewires, std::vector<LaceWire_meshlet>& meshlets, std::map<int, int>& dual2idx)
 {
     std::map<std::array<int, 4>, int> wire4idx2id;
-
+    //pack这边要调整
     int extcnt = 0;
     //可能可以在这里处理掉许多corner case
     for(const auto&wireloop:lacewires)
@@ -196,6 +187,9 @@ void MyCluster::PackintoLaceWire(std::vector<ExternalWire>& ewires, std::vector<
     for(int i=0;i<dualnodes.size();i++)
         if (dualnodes[i].version != -1) {
             LaceWire_meshlet lwmeshlet;
+            if (meshletcnt == 72)
+                std::cout << "debug meshlet 72" << std::endl;
+
             for (const auto& wire : lacewires[i].wires) 
                 lwmeshlet.externalwireids.push_back(wire4idx2id[packvec2array(wire)]);
             for (const auto& elem : dualnodes[i].faces)
@@ -304,6 +298,54 @@ void MyCluster::LoadVertexset2Wire(LaceWires& wire, const VertexSet& vertexset, 
                 wire.wires.push_back(onewire);
                 return;
             }
+            if (pnt == 1500)
+                std::cout << "debug" << std::endl;
+            int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
+            pre.insert(pnt);
+            pnt = nextpnt;
+            //pnt为corner
+            if (vertexset.cornerset.find(pnt) != vertexset.cornerset.end()) {
+                onewire.push_back(pnt);
+                wire.wires.push_back(onewire);
+                break;
+            }
+            else {
+                continue;
+            }
+        }
+
+    }
+
+}
+
+void MyCluster::LoadVertexset2WireVersion2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh)
+{
+    int nodeid = wire.dualid;
+    int start = *(vertexset.cornerset.cbegin());
+    int pnt = start;
+    std::set<int> pre = {};
+
+    for (auto& elem : wire.wires)
+        for (auto& v : elem)
+            pre.insert(v);
+
+
+    for (int i = 0; i < vertexset.cornerset.size(); i++) {
+        std::vector<int> onewire;
+        //int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
+        //pre.insert(pnt);
+
+        while (true)
+        {
+            onewire.push_back(pnt);
+            //nextpnt找不到的
+            if (pre.size() == (vertexset.boundset.size() - 1)) {
+                onewire.push_back(start);
+                wire.wires.push_back(onewire);
+                return;
+            }
+            if (pnt == 1897)
+                std::cout << "debug" << std::endl;
             int nextpnt = FindNextPnt(pnt, pre, vertexset, mesh);
             pre.insert(pnt);
             pnt = nextpnt;

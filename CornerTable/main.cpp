@@ -15,7 +15,7 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/sphere.obj";
+    std::string filename = "E:/OpenMesh/wtbunny.obj";
     // generate vertices
     try
     {
@@ -43,7 +43,7 @@ int main()
    // if (meshletexist == false) {
         MyCluster clu(mesh, 64, 126, 0.5);
         meshlets = clu.oldmeshlets;
-        writeVectorToFile(meshlets, meshletfilename);
+        //writeVectorToFile(meshlets, meshletfilename);
 
         LaceWireGenerator lwgen;
         clu.PackintoLaceWire(lwgen.Ewires, lwgen.meshlets, lwgen.Dual2idx);
@@ -60,16 +60,16 @@ int main()
         myscene.LoadCornerTable(mesh);
 
 
-        //myscene.LoadSCMeshlet(mesh, meshlets);
+        myscene.LoadSCMeshlet(mesh, meshlets);
 
-        myscene.LoadSimpleWireMeshlet(lwgen);
-        myscene.LoadInternalWire(mesh, lwgen);
+        //myscene.LoadSimpleWireMeshlet(lwgen);
+        //myscene.LoadInternalWire(mesh, lwgen);
         //myscene.LoadLaceWire(mesh, clu);
         myscene.LoadLaceWire(lwgen,mesh);
 
         myview.set(&myscene);
-        //myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
-        myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
+        myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
+        //myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
 
         myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
 
@@ -80,9 +80,9 @@ int main()
             /*
             need edit to ust different meshlets type
             */
-            //myview.RenderSCML();
+            myview.RenderSCML();
 
-            myview.RenderSWML();
+            //myview.RenderSWML();
 
             myview.RenderWireLine();
             //myview.RenderInterWire();
