@@ -397,7 +397,7 @@ namespace glfwviewer {
 
     void Scene::renderSWML()
     {
-        glDisable(GL_CULL_FACE);
+
         glDrawMeshTasksNV(0, swobj.simplemeshlets->size());
 
     }

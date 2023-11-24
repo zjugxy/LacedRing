@@ -91,6 +91,16 @@ MyCluster::MyCluster(const MyMesh& mesh, int maxvertex, int maxface,double alpha
 
 void MyCluster::LacedWireGenerator(const MyMesh& mesh)
 {
+
+    //test
+    uint idx = 100;
+    auto vh = mesh.vertex_handle(idx);
+    for (const auto& elem : mesh.ve_range(vh)) {
+        auto edgeidx = elem.idx();
+        auto face0 = elem.h0().face().idx();
+    }
+    //
+
     vertexsets.resize(dualnodes.size());
     //先生成vertex sets
     int dualid = 0;
@@ -110,13 +120,41 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
                 }
                 int adjidx = adj_graph[dualid].begin()->first;
                 vertexsets[adjidx].surrounded = 2;//包围了
+                //处理环的情况
+                auto randompnt = *vertexsets[dualid].boundset.begin();
+                vertexsets[adjidx].cornerset.insert(randompnt);
+                vertexsets[dualid].cornerset.insert(randompnt);
+
             }
 
             for (auto& face : elem.faces)
                 vertexsets[dualid].faces.insert(face);
+
+            for (auto& ver : vertexsets[dualid].boundset) {
+                auto vh = mesh.vertex_handle(ver);
+                for (const auto& veit : mesh.ve_range(vh)) {
+                    uint face0 = veit.h0().face().idx();
+                    uint face1 = veit.h1().face().idx();
+
+                    bool face0inNode = (vertexsets[dualid].faces.find(face0) != vertexsets[dualid].faces.end());
+                    bool face1inNode = (vertexsets[dualid].faces.find(face1) != vertexsets[dualid].faces.end());
+
+                    if (face0inNode && face1inNode)continue;
+                    if ((face0inNode == false) && (face1inNode == false))continue;
+
+                    if (face0inNode)
+                        vertexsets[dualid].edgeset.insert(veit.h0().idx());
+                    else
+                        vertexsets[dualid].edgeset.insert(veit.h1().idx());
+                }
+            }
+
+
         }
         dualid++;
     }
+
+
 
     lacewires.resize(dualnodes.size());
 
@@ -125,44 +163,10 @@ void MyCluster::LacedWireGenerator(const MyMesh& mesh)
         if (vertexsets[i].boundset.size() != 0) {
             LaceWires temp;
             temp.dualid = i;
-            {
-                if(i==2590)
-                    std::cout << "debug　" << i << std::endl;
-                if (vertexsets[i].surrounded != 0) {
-                    lateaddress.push_back(i);
-                    continue;
-                }
-
-                LoadVertexset2Wire(temp, vertexsets[i], mesh);
-            }
-            lacewires[i] = (temp);
+            BuildLaceWireFromEdge(vertexsets[i], mesh, temp);
+            lacewires[i] = temp;
         }
     }
-
-
-    for (auto& id : lateaddress) {
-        if (vertexsets[id].surrounded == 1) {
-            if (vertexsets[id].cornerset.size() != 0)std::cout << "error lateaddress sur ==1" << std::endl;
-            //先处理lacewires[i]
-            int adjid = (adj_graph[id].begin())->first;
-            LaceWires temp;
-            temp.dualid = id;
-            LoadSingleLoop(temp, vertexsets[id], mesh);
-            lacewires[id] = (temp);
-            lacewires[adjid].wires.push_back(temp.wires[0]);
-        }
-    }
-
-    for (auto& id : lateaddress) {
-        if (vertexsets[id].surrounded == 2) {
-            //lacewires[id]其中的wires已经被一部分初始化了
-            LaceWires& temp = lacewires[id];
-            if (temp.wires.size() == 0)std::cout << "error may occur in wire surround others" << std::endl;
-            LoadVertexset2WireVersion2(temp, vertexsets[id], mesh);
-
-        }
-    }
-
 
 }
 
@@ -175,7 +179,9 @@ void MyCluster::PackintoLaceWire(std::vector<ExternalWire>& ewires, std::vector<
     for(const auto&wireloop:lacewires)
         for (const auto& wire : wireloop.wires) {
             std::array<int, 4> temp = packvec2array(wire);
-            if (wire4idx2id.find(temp) == wire4idx2id.end()) {
+            std::array<int, 4> temprev{ temp[3],temp[2],temp[1],temp[0] };
+            if ((wire4idx2id.find(temp) == wire4idx2id.end()) &&(wire4idx2id.find(temprev)==wire4idx2id.end()))
+            {
                 ExternalWire ewire;
                 for (const auto& elem : wire)ewire.wire.push_back(elem);
                 ewires.push_back(ewire);
@@ -190,8 +196,15 @@ void MyCluster::PackintoLaceWire(std::vector<ExternalWire>& ewires, std::vector<
             if (meshletcnt == 72)
                 std::cout << "debug meshlet 72" << std::endl;
 
-            for (const auto& wire : lacewires[i].wires) 
-                lwmeshlet.externalwireids.push_back(wire4idx2id[packvec2array(wire)]);
+            for (const auto& wire : lacewires[i].wires) {
+                std::array<int, 4> temp = packvec2array(wire);
+                std::array<int, 4> temprev{ temp[3],temp[2],temp[1],temp[0] };
+                auto it = wire4idx2id.find(temp);
+                if (it == wire4idx2id.end())
+                    it = wire4idx2id.find(temprev);
+                if (it == wire4idx2id.end())std::cout << "error in map wire to id" << std::endl;
+                lwmeshlet.externalwireids.push_back(uint(it->second));
+            }
             for (const auto& elem : dualnodes[i].faces)
                 lwmeshlet.faces.insert(elem);
             for (const auto& elem : adj_graph[i])
@@ -318,6 +331,38 @@ void MyCluster::LoadVertexset2Wire(LaceWires& wire, const VertexSet& vertexset, 
 
 }
 
+void MyCluster::LoadVertexset2WireVersion0(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh)
+{
+    std::unordered_set<uint> remainvertex =  vertexset.boundset ;
+    for (const auto& elem : vertexset.cornerset)remainvertex.erase(elem);
+
+    while (!remainvertex.empty())
+    {
+        uint startidx, nextidx;
+        FindStartCorner(vertexset.cornerset, remainvertex, mesh,startidx,nextidx);
+        std::vector<int> onewire{ int(startidx),int(nextidx) };
+        //在下面循环中build onw wire
+        while (true)
+        {
+            auto vh = mesh.vertex_handle(nextidx);
+            for (const auto& vvit : mesh.vv_range(vh)) {
+                int idx = vvit.idx();
+                if (remainvertex.find(idx) != remainvertex.end()) {
+                    nextidx = idx;
+                    remainvertex.erase(nextidx);
+                    onewire.push_back(nextidx);
+                    break;
+                }
+            }
+           
+
+        }
+
+
+    }
+
+}
+
 void MyCluster::LoadVertexset2WireVersion2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh)
 {
     int nodeid = wire.dualid;
@@ -429,6 +474,131 @@ void MyCluster::LoadSingleLoop(LaceWires& wire, const VertexSet& vertexset, cons
     std::cout << "error in single loop" << std::endl;
 
 }
+
+void MyCluster::FindStartCorner(const std::unordered_set<uint>& cornerset, std::unordered_set<uint>& remainset, const MyMesh& mesh, uint& startidx, uint& nextidx)
+{
+    for (const auto& elem : cornerset) {
+        auto vh = mesh.vertex_handle(elem);
+        for(const auto&vvit:mesh.vv_range(vh))
+            if (remainset.find(vvit.idx()) != remainset.end()) {
+                startidx = elem;
+                nextidx = vvit.idx();
+                remainset.erase(nextidx);
+                return;
+            }
+    }
+    std::cout << "error in find start corner" << std::endl;
+}
+
+void MyCluster::BuildLaceWireFromEdge(VertexSet& vertexset, const MyMesh& mesh, LaceWires& wires)
+{
+    std::unordered_set<uint>& edges = vertexset.edgeset;
+    const std::unordered_set<uint>& corners = vertexset.cornerset;
+    while (!edges.empty())
+    {
+        std::deque<uint> edgewire;
+        auto startidx = *edges.begin();
+        edges.erase(startidx);
+        edgewire.push_back(startidx);
+        
+        PushEdgeAtback(edgewire, mesh, edges,corners);
+        PushEdgeAtFront(edgewire, mesh, edges, corners);
+        PackAndCheck(wires, vertexset, edgewire,mesh);
+
+    }
+
+}
+
+void MyCluster::PushEdgeAtback(std::deque<uint>& edgewire, const MyMesh& mesh, std::unordered_set<uint>& edges, const std::unordered_set<uint> corners)
+{
+    do {
+        auto heidx = edgewire.back();
+        auto heh = mesh.halfedge_handle(heidx);
+        auto toverh = mesh.to_vertex_handle(heh);
+        auto vidx = toverh.idx();
+
+        if (corners.find(vidx) != corners.end())return;
+        
+        for (MyMesh::ConstVertexOHalfedgeIter voh_it(mesh, toverh); voh_it.is_valid(); ++voh_it)
+        {
+            MyMesh::HalfedgeHandle temp = *voh_it; 
+            
+            if (edges.find(temp.idx()) != edges.end()) {
+                edges.erase(temp.idx());
+                edgewire.push_back(temp.idx());
+                break;
+            }
+            int oppidx = voh_it->opp().idx();
+            if (edges.find(oppidx) != edges.end()) {
+                edges.erase(oppidx);
+                edgewire.push_back(oppidx);
+                break;
+            }
+        }
+
+    } while (!edges.empty());
+
+}
+
+void MyCluster::PushEdgeAtFront(std::deque<uint>& edgewire, const MyMesh& mesh, std::unordered_set<uint>& edges, const std::unordered_set<uint> corners)
+{
+    do {
+        auto heidx = edgewire.front();
+        auto heh = mesh.halfedge_handle(heidx);
+        auto fromverh = mesh.from_vertex_handle(heh);
+        auto vidx = fromverh.idx();
+
+        if (corners.find(vidx) != corners.end())return;
+
+        for (MyMesh::ConstVertexOHalfedgeIter voh_it(mesh, fromverh); voh_it.is_valid(); ++voh_it)
+        {
+            MyMesh::HalfedgeHandle temp = *voh_it;
+
+            if (edges.find(temp.idx()) != edges.end()) {
+                edges.erase(temp.idx());
+                edgewire.push_front(temp.idx());
+                break;
+            }
+            int oppidx = voh_it->opp().idx();
+            if (edges.find(oppidx) != edges.end()) {
+                edges.erase(oppidx);
+                edgewire.push_front(oppidx);
+                break;
+            }
+        }
+
+    } while (!edges.empty());
+
+}
+
+void MyCluster::PackAndCheck(LaceWires& wires, VertexSet& vertexset, std::deque<uint>& edgewire,const MyMesh& mesh)
+{
+    auto startedge = edgewire.front();
+    auto endedge = edgewire.back();
+    auto starth = mesh.halfedge_handle(startedge);
+    auto endh = mesh.halfedge_handle(endedge);
+    auto startvidx = mesh.from_vertex_handle(starth).idx();
+    auto endvidx = mesh.to_vertex_handle(endh).idx();
+    
+    if (vertexset.cornerset.find(startvidx) == vertexset.cornerset.end())std::cout << "error in check pack and check";
+    if (vertexset.cornerset.find(endvidx) == vertexset.cornerset.end())std::cout << "error in check pack and check";
+
+    std::vector<int> res;
+    res.push_back(startvidx);
+
+
+    for (auto& elem : edgewire) {
+        auto edgehandle = mesh.halfedge_handle(elem);
+        auto fromidx = mesh.from_vertex_handle(edgehandle).idx();
+        auto toidx = mesh.to_vertex_handle(edgehandle).idx();
+        if(fromidx!=res.back())std::cout << "error in check pack and check";
+        res.push_back(toidx);
+    }
+
+    wires.wires.push_back(res);
+
+}
+
 
 double MyCluster::EvaluateCost(int id1, int id2)
 {

@@ -38,6 +38,7 @@ struct VertexSet {
 	std::unordered_set<uint> boundset;
 	std::unordered_set<uint> cornerset;
 	std::unordered_set<uint> faces;
+	std::unordered_set<uint> edgeset;
 	int surrounded = 0;
 };
 
@@ -84,11 +85,20 @@ private:
 	std::array<int, 4> packvec2array(const std::vector<int>& vec);
 
 	void LoadVertexset2Wire(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
+	void LoadVertexset2WireVersion0(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
 	void LoadVertexset2WireVersion2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
 
 	void LoadWiresur2(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
 	void LoadSingleLoop(LaceWires& wire, const VertexSet& vertexset, const MyMesh& mesh);
 
+	void FindStartCorner(const std::unordered_set<uint>& cornerset,
+		std::unordered_set<uint>& remainset, const MyMesh& mesh, uint& startidx,
+		uint& nextidx);
+	void BuildLaceWireFromEdge(VertexSet& vertexset, const MyMesh& mesh, LaceWires& wires);
 
+	void PushEdgeAtback(std::deque<uint>& edgewire, const MyMesh& mesh, std::unordered_set<uint>& edges, const std::unordered_set<uint> corners);
+	void PushEdgeAtFront(std::deque<uint>& edgewire, const MyMesh& mesh, std::unordered_set<uint>& edges, const std::unordered_set<uint> corners);
+
+	void PackAndCheck(LaceWires& wires, VertexSet& vertexset, std::deque<uint>& edgewire,const MyMesh& mesh);
 };
 

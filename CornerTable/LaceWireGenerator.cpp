@@ -128,13 +128,18 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 			for (auto& elem : meshlet.interwire.wire)
 				if (elem != NEXTWIRE)
 					gloidx2idx[elem] = mapidx++;
+
 			for (auto& id : meshlet.externalwireids)
-				for (int i = 0; i < Ewires[id].wire.size() - 1; i++)
-					gloidx2idx[Ewires[id].wire[i]] = mapidx++;
+				for (int i = 0; i < Ewires[id].wire.size(); i++)
+					if(gloidx2idx.find(Ewires[id].wire[i])==gloidx2idx.end())
+						gloidx2idx[Ewires[id].wire[i]] = mapidx++;
 
-			if (gloidx2idx.size() != meshlet.vertexnum)
+			if (gloidx2idx.size() != meshlet.vertexnum) {
 				std::cout << "eroor in map" << std::endl;
-
+				for (auto& elem : meshlet.vertexs)
+					if (gloidx2idx.find(elem) == gloidx2idx.end())
+						std::cout << elem;
+			}
 			std::set<uint> facestoremove = meshlet.faces;
 
 
