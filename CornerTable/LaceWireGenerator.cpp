@@ -94,6 +94,9 @@ void LaceWireGenerator::InternalWireGeneraotr(const MyMesh& mesh)
 					break;
 				}
 			//map”≥…‰
+			meshlet.interwire.left.resize(1);
+			meshlet.interwire.right.resize(1);
+
 			std::map<uint, short>& gloidx2idx = gloidx2idxvec[cntid];
 			std::map<short, uint>& reversemap = idx2glo[cntid];
 

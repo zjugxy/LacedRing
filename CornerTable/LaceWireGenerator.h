@@ -2,6 +2,19 @@
 #include"Meshlet.h"
 #include<unordered_set>
 #include<deque>
+
+struct FinalMeshlet {
+	unsigned char vertexcnt;
+	unsigned char facecnt;
+	unsigned char ewirecnt;
+	unsigned char __meaningless;
+
+	uint ptr_inter;
+	std::vector<uint> ptrs_exter;
+	//别说了，直接变成uint大军
+};
+
+
 class LaceWireGenerator
 {
 public:

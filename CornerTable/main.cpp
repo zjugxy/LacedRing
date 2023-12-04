@@ -17,7 +17,7 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/wtbunny.obj";
+    std::string filename = "E:/OpenMesh/horse.obj";
     // generate vertices
     try
     {
