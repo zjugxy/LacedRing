@@ -28,6 +28,12 @@ public:
 	std::vector<unsigned char> priminfo;
 	std::vector<Simple_meshlet> simplemeshlets;
 
+
+	//GPU packer
+
+	std::vector<uint> FinalMeshletData;
+	std::vector<uint> meshletdata;
+
 public:
 	void InternalWireGeneraotr(const MyMesh& mesh);
 	LaceWireGenerator();
@@ -48,8 +54,10 @@ public:
 	bool IsNextPnt(uint vidx, std::vector<std::set<uint>>& levelofPnts);
 
 	void PackIntoGPUSimple(const MyMesh& mesh);
-	void PackIntoGPU();
+	void PackIntoGPU(const MyMesh& mesh);
 	void SimpleCheckPrimIdx(int primbegin, const MyMesh& mesh, const LaceWire_meshlet& meshlet,int cntid);
+
+	 uint Packunsignedchar(unsigned char& a, unsigned char& b, unsigned char& c, unsigned char d);
 	// Interlacewire(std::vector<std::array<uint, 2>>& wirerecord, const MyMesh& mesh, LaceWire_meshlet& meshlet, const std::unordered_set<uint>& boundset);
 	//bool Internextpntsearch(const MyMesh& mesh, const std::unordered_set<uint>& boundset, uint& startidx, uint& starthlidx, uint& nextidx, uint& nexthlidx,const std::set<uint>& pre);
 };

@@ -4,6 +4,8 @@
 #include<deque>
 #include<iostream>
 #include<random>
+#include <cstdint>
+
 
 #define NOINTERNALVERTEX 0xFFFFFFFF
 #define NEXTWIRE 0xFFFFFFFF
@@ -538,6 +540,112 @@ void LaceWireGenerator::PackIntoGPUSimple(const MyMesh& mesh)
 
 }
 
+void LaceWireGenerator::PackIntoGPU(const MyMesh& mesh)
+{
+	//struct FinalMeshlet {
+	//	unsigned char vertexcnt;
+	//	unsigned char facecnt;
+	//	unsigned char ewirecnt;
+	//	unsigned char __meaningless;
+
+	//	uint ptr_inter;
+	//	std::vector<uint> ptrs_exter;
+	//	//别说了，直接变成uint大军
+	//};
+
+	//meshlet data pack into an array
+	std::map<uint, uint> Internalid2position;
+	std::map<uint, uint> Externalid2position;
+
+	uint position = 0;
+
+	// internal meshlet data
+	// 8 bit -- vertexnum 8 bit -- irregular triangles num 8bit geoinfo offset
+	// 
+	//
+
+	// internal meshlet data
+	//4* unsigned char intervnum irnum geoinfoo
+	//left right irregular
+	//geoinfo
+
+
+
+
+	union FLoatAndUint
+	{
+		float x;
+		uint y;
+	};
+	//注意::
+	//要回去查看一下具体的之前是怎么往wire里面装东西的 NEXTWIRE？怎么处理的
+	int cntid = 0;
+	for (const auto& meshlet : meshlets) {
+		unsigned char intervnum = meshlet.interwire.wire.size();
+		unsigned char irnum = (unsigned char)meshlet.irregular[0];
+		unsigned char geoinfooffset = 1 + (meshlet.interwire.wire.size() * 2 + 3 * meshlet.irregular[0] + 3) / 4;
+		unsigned char meaningless = 0;
+
+		std::vector<unsigned char> connectivity;
+		for (const auto& elem : meshlet.interwire.left)
+			connectivity.push_back(elem);
+		
+		for (const auto& elem : meshlet.interwire.right)
+			connectivity.push_back(elem);
+
+		for (int i = 1; i < meshlet.irregular.size(); i++)
+			connectivity.push_back(meshlet.irregular[i]);
+
+		int remainpack = 4 - connectivity.size() % 4;
+		for (int i = 0; i < remainpack; i++)
+			connectivity.push_back(0);
+
+		meshletdata.push_back(Packunsignedchar(intervnum, irnum, geoinfooffset, meaningless));
+		for (int i = 0; i < connectivity.size(); i+=4) 
+			meshletdata.push_back(Packunsignedchar(connectivity[i], connectivity[i + 1], connectivity[i + 2], connectivity[i + 3]));
+		
+		for (auto& idx : meshlet.interwire.wire) {
+			auto vh = mesh.vertex_handle(idx);
+			auto pnt = mesh.point(vh);
+			FLoatAndUint temp;
+			temp.x= pnt[0];
+			meshletdata.push_back(temp.y);
+			temp.x = pnt[1];
+			meshletdata.push_back(temp.y);
+			temp.x = pnt[2];
+			meshletdata.push_back(temp.y);
+
+		}
+		Internalid2position[cntid] = position;
+		cntid++;
+		position = meshletdata.size();
+	}
+
+	cntid = 0;
+	for (const auto& ewire : Ewires) {
+		
+	}
+
+
+
+
+	for (const auto& meshlet : meshlets) {
+		unsigned char vertexcnt = meshlet.vertexnum;
+		//face num需要重新计算
+		unsigned char facecnt = meshlet.facenum;
+		unsigned char ewirecnt = meshlet.externalwireids.size();
+		unsigned char __meaningless;
+
+		uint firstelem = ((uint)(vertexcnt) << 24) | ((uint)(facecnt) << 16) | ((uint)(ewirecnt) << 8);
+		// ptr_inter =  position of internal meshlet
+		//
+
+
+	}
+
+
+}
+
 void LaceWireGenerator::SimpleCheckPrimIdx(int primbegin, const MyMesh& mesh, const LaceWire_meshlet& meshlet,int cntid)
 {
 	int primcnt = (priminfo.size() - primbegin) / 3;
@@ -572,5 +680,10 @@ void LaceWireGenerator::SimpleCheckPrimIdx(int primbegin, const MyMesh& mesh, co
 	}
 	
 
+}
+
+uint LaceWireGenerator::Packunsignedchar(unsigned char& a, unsigned char& b, unsigned char& c, unsigned char d)
+{
+	return ((uint)a << 24) | ((uint)b << 16) | ((uint)c << 8) | ((uint)d << 0);
 }
 
