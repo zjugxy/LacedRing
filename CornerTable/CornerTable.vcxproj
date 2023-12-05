@@ -143,7 +143,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ClusteringALgotithm.cpp" />
     <ClCompile Include="CornerTable.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="LaceWireGenerator.cpp" />
@@ -151,18 +150,19 @@
     <ClCompile Include="meshletloader.cpp" />
     <ClCompile Include="MyCluster.cpp" />
     <ClCompile Include="MyLR.cpp" />
+    <ClCompile Include="NewCluster.cpp" />
     <ClCompile Include="Viewer\camera.cpp" />
     <ClCompile Include="Viewer\scene.cpp" />
     <ClCompile Include="Viewer\viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ClusteringALgotithm.h" />
     <ClInclude Include="CornerTable.h" />
     <ClInclude Include="LaceWireGenerator.h" />
     <ClInclude Include="Meshlet.h" />
     <ClInclude Include="MShader.h" />
     <ClInclude Include="MyCluster.h" />
     <ClInclude Include="MyLR.h" />
+    <ClInclude Include="NewCluster.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Viewer\camera.h" />
     <ClInclude Include="Viewer\scene.h" />

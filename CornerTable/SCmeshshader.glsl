@@ -48,12 +48,16 @@ void main(){
 	//每个线程处理顶点
 
 
+	//if((mi==48)||(mi==10000)){
 		uint add = threadid;
 		while(add<meshlet.vertex_cnt){
 			uint gloveridx = meshlet.vertex_begin+add;
 			vec4 vergeo = position[gloveridx];
 			gl_MeshVerticesNV[add].gl_Position = projection*view*model*vergeo;
 			v_out[add].color = vec3(meshlet.color);
+			if(mi==48)
+				v_out[add].color = vec3(0.0,0.0,0.0);
+
 			add+=GROUP_SIZE;
 		}
 
@@ -68,6 +72,6 @@ void main(){
 
 		if(threadid==0)
 			gl_PrimitiveCountNV = meshlet.primcnt;
-
-
+	
+	//}
 }

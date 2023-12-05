@@ -142,6 +142,26 @@ namespace glfwviewer {
 
     }
 
+    void Scene::LoadLaceWire(const MyMesh& mesh, const NewCluster& nclu)
+    {
+        glGenVertexArrays(1, &lineobj.VAO);
+        glGenBuffers(1, &lineobj.VBO);
+        glGenBuffers(1, &lineobj.EBO);
+
+        uint i = 0;
+        for (const auto& wire : nclu.gloewires) {
+            for (const auto& ver : wire) {
+                auto vh = mesh.vertex_handle(ver);
+                auto pnt = mesh.point(vh);
+                lineobj.geoinfo.emplace_back(pnt[0], pnt[1], pnt[2]);
+                lineobj.indices.push_back(i++);
+            }
+            lineobj.indices.push_back(0xffffffff);
+        }
+
+
+    }
+
     void Scene::LoadLacePoint(const MyMesh& mesh, const MyCluster& clu)
     {
         const std::vector<VertexSet> vsetref = clu.vertexsets;
@@ -348,7 +368,7 @@ namespace glfwviewer {
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
         glEnable(GL_PRIMITIVE_RESTART_FIXED_INDEX);
-        glLineWidth(10.0f);
+        glLineWidth(5.0f);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, lineobj.EBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, lineobj.indices.size() * sizeof(uint), lineobj.indices.data(), GL_DYNAMIC_DRAW);
         glDrawElements(GL_LINE_STRIP, lineobj.indices.size(), GL_UNSIGNED_INT, 0);

@@ -8,7 +8,7 @@
 #include"../MyLR.h"
 #include"../Meshlet.h"
 #include"../MyCluster.h"
-
+#include"../NewCluster.h"
 #include"../LaceWireGenerator.h"
 namespace glfwviewer {
 
@@ -181,6 +181,7 @@ namespace glfwviewer {
 		void LoadLR(const MyLR& lr);
 		void LoadLaceWire(const MyMesh& mesh,const MyCluster& clu);
 		void LoadLaceWire(const LaceWireGenerator& lwn,const MyMesh& mesh);
+		void LoadLaceWire(const MyMesh& mesh, const NewCluster& nclu);
 
 		void LoadLacePoint(const MyMesh& mesh, const MyCluster& clu);
 		void LoadInternalWire(const MyMesh& mesh ,const LaceWireGenerator& lwn);
