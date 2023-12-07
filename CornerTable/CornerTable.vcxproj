@@ -151,6 +151,7 @@
     <ClCompile Include="MyCluster.cpp" />
     <ClCompile Include="MyLR.cpp" />
     <ClCompile Include="NewCluster.cpp" />
+    <ClCompile Include="NewLWGenerator.cpp" />
     <ClCompile Include="Viewer\camera.cpp" />
     <ClCompile Include="Viewer\scene.cpp" />
     <ClCompile Include="Viewer\viewer.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="MyCluster.h" />
     <ClInclude Include="MyLR.h" />
     <ClInclude Include="NewCluster.h" />
+    <ClInclude Include="NewLWGenerator.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Viewer\camera.h" />
     <ClInclude Include="Viewer\scene.h" />

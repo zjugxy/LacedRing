@@ -7,7 +7,7 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"Viewer/viewer.h"
 #include"ClusteringALgotithm.h"
 #include"NewCluster.h"
-#include"LaceWireGenerator.h"
+#include"NewLWGenerator.h"
 bool meshletexist = false;
 std::string meshletfilename;
 
@@ -50,10 +50,11 @@ int main()
         meshlets = nclu.oldmeshlets;
 
 
-        LaceWireGenerator lwgen;
+        //LaceWireGenerator lwgen;
         //clu.PackintoLaceWire(lwgen.Ewires, lwgen.meshlets, lwgen.Dual2idx);
         //lwgen.InternalWireGeneraotr(mesh);
-
+        NewLWGenerator nlwgen(nclu);
+        nlwgen.FUNC(mesh);
     
         glfwviewer::Viewer myview;
         myview.initGLFW();
@@ -62,9 +63,8 @@ int main()
 
         if (1) {
             myscene.LoadSCMeshlet(mesh, meshlets);
-            //myscene.LoadInternalWire(mesh, lwgen);
+            myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
-            //myscene.LoadLaceWire(lwgen, mesh);
             myview.set(&myscene);
             myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
             myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
@@ -81,28 +81,27 @@ int main()
             glfwTerminate();
             exit(EXIT_SUCCESS);
         }
-        //else {
+        else {
 
-        //    myscene.LoadSimpleWireMeshlet(lwgen);
-        //    //myscene.LoadInternalWire(mesh, lwgen);
-        //    //myscene.LoadLaceWire(mesh, clu);
-        //    myscene.LoadLaceWire(lwgen, mesh);
-        //    myview.set(&myscene);
-        //    myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
-        //    myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
+            myscene.LoadSimpleWireMeshlet(nlwgen);
+            myscene.LoadInternalWire(mesh, nlwgen);
+            myscene.LoadLaceWire(mesh, nclu);
+            myview.set(&myscene);
+            myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
+            myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
 
-        //    while (!glfwWindowShouldClose(myview.MYwindow()))
-        //    {
-        //        myview.processinput();
-        //        myview.RenderSWML();
-        //        myview.RenderWireLine();
-        //        //myview.RenderInterWire();
-        //        glfwSwapBuffers(myview.MYwindow());
-        //        glfwPollEvents();
-        //    }
-        //    glfwTerminate();
-        //    exit(EXIT_SUCCESS);
-        //}
+            while (!glfwWindowShouldClose(myview.MYwindow()))
+            {
+                myview.processinput();
+                myview.RenderSWML();
+                myview.RenderWireLine();
+                //myview.RenderInterWire();
+                glfwSwapBuffers(myview.MYwindow());
+                glfwPollEvents();
+            }
+            glfwTerminate();
+            exit(EXIT_SUCCESS);
+        }
 
     
 

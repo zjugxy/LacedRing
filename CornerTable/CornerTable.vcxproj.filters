@@ -63,6 +63,9 @@
     <ClCompile Include="NewCluster.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="NewLWGenerator.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CornerTable.h">
@@ -99,6 +102,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="NewCluster.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="NewLWGenerator.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

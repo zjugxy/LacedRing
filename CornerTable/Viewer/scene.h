@@ -10,6 +10,8 @@
 #include"../MyCluster.h"
 #include"../NewCluster.h"
 #include"../LaceWireGenerator.h"
+#include"../NewLWGenerator.h"
+
 namespace glfwviewer {
 
 	class BoundingSphere
@@ -185,6 +187,7 @@ namespace glfwviewer {
 
 		void LoadLacePoint(const MyMesh& mesh, const MyCluster& clu);
 		void LoadInternalWire(const MyMesh& mesh ,const LaceWireGenerator& lwn);
+		void LoadInternalWire(const MyMesh& mesh, const NewLWGenerator& nlwn);
 
 		
 		void renderML();
@@ -203,6 +206,7 @@ namespace glfwviewer {
 		void LoadIXMeshlet(MyMesh mesh, Meshlets meshlets);
 		void LoadSCMeshlet(MyMesh mesh, Meshlets meshlets);
 		void LoadSimpleWireMeshlet(const LaceWireGenerator& lwn);
+		void LoadSimpleWireMeshlet(const NewLWGenerator& nlwn);
 
 
 		void renderTSML();

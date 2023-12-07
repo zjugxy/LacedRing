@@ -69,6 +69,5 @@ void main(){
 
 		if(threadid==0)
 			gl_PrimitiveCountNV = meshlet.primcnt;
-
-
+	
 }

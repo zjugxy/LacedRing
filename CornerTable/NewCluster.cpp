@@ -163,6 +163,12 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh)
 	}
 
 	//可以在这里做一个模拟退火？
+	// cut sharp triangles
+	
+	//识别环条状meshlet以及近似还条状的meshlet,记录并分割
+
+
+	TryShapeHeal(mesh);
 
 	PackOldmeshlets();
 	GenerateEwire(mesh);
@@ -328,7 +334,7 @@ void NewCluster::GenerateEwire(const MyMesh& mesh) {
 	}
 
 	//
-	std::vector<EwireBuildSet> buildsets;
+
 	buildsets.resize(mymeshlets.size());
 
 	for (uint i = 0; i < mymeshlets.size(); ++i) {
@@ -638,4 +644,347 @@ void NewCluster::ReorderAndCheck(EwireBuildSet& buildset)
 	}
 	buildset.ewires.clear();
 	buildset.ewires = orderedwires;
+}
+
+void NewCluster::TryShapeHeal(const MyMesh& mesh)
+{
+	std::vector<uint> errormeshlets;
+
+	detecters.resize(mymeshlets.size());
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		bool res = ShapeErrorDetect(mesh, mid);
+		if (res == false)
+			errormeshlets.push_back(mid);
+	}
+
+	if (errormeshlets.size() == 0)
+		return;
+
+	do {
+		for (auto& mid : errormeshlets) {
+			if (detecters[mid].topotype == Torus)
+				TorusHeal(mesh, mid);
+			else if (detecters[mid].topotype == SharpConnect)
+				SharpConnectHeal(mesh, mid);
+			else
+				std::cout << "what happened?" << std::endl;
+		}
+
+		errormeshlets.clear();
+
+		for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+			bool res = ShapeErrorDetect(mesh, mid);
+			if (res == false)
+				errormeshlets.push_back(mid);
+		}
+
+	} while (errormeshlets.size() != 0);
+
+}
+
+//如果好的返回true
+bool NewCluster::ShapeErrorDetect(const MyMesh& mesh, uint mid)
+{
+	auto& detecter = detecters[mid];
+	if (detecter.topotype != Unchecked)
+		return detecter.topotype == Correct;
+
+	detecter.halfedgeset.clear();
+	detecter.specialpnts.clear();
+	detecter.newfacestart.clear();
+
+	for (auto& face : mymeshlets[mid].faces) {
+		auto fh = mesh.face_handle(face);
+		for (auto fhit = mesh.cfh_iter(fh); fhit.is_valid(); ++fhit) {
+			auto oppfid = fhit->opp().face().idx();
+			if (mymeshlets[mid].faces.find(oppfid) == mymeshlets[mid].faces.end())
+				detecter.halfedgeset.insert(fhit->idx());
+		}
+	}
+
+	auto& edgeset = detecter.halfedgeset;
+	std::map<uint, int> vertexcnt;
+	int loopcnt = 0;
+	std::vector<std::vector<uint>> loops;
+
+	//find first loop
+	while (!edgeset.empty())
+	{
+		std::vector<uint> oneloop;
+		uint seedhe = *edgeset.begin();
+		edgeset.erase(seedhe);
+		auto heh = mesh.halfedge_handle(seedhe);
+		auto startidx = mesh.from_vertex_handle(heh).idx();
+		auto nextidx = mesh.to_vertex_handle(heh).idx();
+		vertexcnt[startidx] += 1;
+		vertexcnt[nextidx] += 1;
+
+		oneloop.push_back(heh.idx());
+
+		do {
+			auto vh = mesh.vertex_handle(nextidx);
+			for (auto cvoit = mesh.cvoh_iter(vh); cvoit.is_valid(); ++cvoit) {
+				if (edgeset.find(cvoit->idx()) != edgeset.end()) {
+					edgeset.erase(cvoit->idx());
+					vertexcnt[nextidx] += 1;
+					nextidx = cvoit->to().idx();
+					oneloop.push_back(cvoit->idx());
+					vertexcnt[nextidx] += 1;
+					break;
+				}
+			}
+		} while (nextidx != startidx);
+		loopcnt++;
+		loops.push_back(oneloop);
+	}
+
+	if (loopcnt == 1)
+		detecter.topotype = Correct;
+	else
+		detecter.topotype = Torus;
+
+	for (auto& elem : vertexcnt)
+		if (elem.second != 2)
+			detecter.specialpnts.push_back(elem.first);
+	if (!detecter.specialpnts.empty())
+		detecter.topotype = SharpConnect;
+
+	if (detecter.topotype != Correct)
+		std::cout << "Check type error mid " << mid << std::endl;
+
+	if (detecter.topotype == Torus) {
+		GenerateTorusNewFaceStart(mesh, loops, mid);
+	}
+
+
+
+
+
+
+
+	return detecter.topotype==Correct;
+}
+
+void NewCluster::TorusHeal(const MyMesh& mesh, uint mid)
+{
+	//对mymeshlets[mid]进行重构，重新划分face,更新vertex
+	auto& meshlet = mymeshlets[mid];
+
+	auto& faceset = mymeshlets[mid].faces;
+	uint totalfacenum = faceset.size();
+	std::unordered_set<uint> newfaceset;
+
+	//GrowFaceSet(mesh, newfaceset, faceset, detecters[mid].newfacestart, totalfacenum / 2);
+	for (auto& face : detecters[mid].newfacestart)
+		newfaceset.insert(face);
+	for (auto& face : newfaceset)
+		meshlet.faces.erase(face);
+
+	//更新老的
+	meshlet.vertices.clear();
+	for (auto& face : meshlet.faces) {
+		auto fh = mesh.face_handle(face);
+		for (auto fvit = mesh.cfv_iter(fh); fvit.is_valid(); ++fvit)
+			meshlet.vertices.insert(fvit->idx());
+	}
+	detecters[mid].topotype = Unchecked;
+	detecters[mid].halfedgeset.clear();
+	detecters[mid].specialpnts.clear();
+	detecters[mid].newfacestart.clear();
+
+	//更新新的
+	Meshlet_built newmeshlet;
+	newmeshlet.faces = newfaceset;
+
+	for (auto& face : newmeshlet.faces) {
+		auto fh = mesh.face_handle(face);
+		for (auto fvit = mesh.cfv_iter(fh); fvit.is_valid(); ++fvit)
+			newmeshlet.vertices.insert(fvit->idx());
+	}
+	ShapeHeal newdetect;
+	newdetect.topotype = Unchecked;
+
+	mymeshlets.push_back(newmeshlet);
+	detecters.push_back(newdetect);
+
+}
+
+void NewCluster::SharpConnectHeal(const MyMesh& mesh, uint mid)
+{
+	//对mymeshlets[mid]进行重构，重新划分face,更新vertex
+	auto& meshlet = mymeshlets[mid];
+	uint startv = detecters[mid].specialpnts[0];
+	auto vh = mesh.vertex_handle(startv);
+	uint startf;
+	auto& faceset = meshlet.faces;
+
+	for(auto cvfit = mesh.cvf_iter(vh);cvfit.is_valid();++cvfit)
+		if (faceset.find(cvfit->idx()) != faceset.end()) {
+			startf = cvfit->idx();
+			break;
+		}
+
+	uint totalfacenum = faceset.size();
+	std::unordered_set<uint> newfaceset;
+
+	GrowFaceSet(mesh, newfaceset, faceset, startf,totalfacenum/2);
+
+	//更新老的
+	meshlet.vertices.clear();
+	for (auto& face : meshlet.faces) {
+		auto fh = mesh.face_handle(face);
+		for (auto fvit = mesh.cfv_iter(fh); fvit.is_valid(); ++fvit)
+			meshlet.vertices.insert(fvit->idx());
+	}
+	detecters[mid].topotype = Unchecked;
+	detecters[mid].halfedgeset.clear();
+	detecters[mid].specialpnts.clear();
+	detecters[mid].newfacestart.clear();
+
+	//更新新的
+	Meshlet_built newmeshlet;
+	newmeshlet.faces = newfaceset;
+
+	for (auto& face : newmeshlet.faces) {
+		auto fh = mesh.face_handle(face);
+		for (auto fvit = mesh.cfv_iter(fh); fvit.is_valid(); ++fvit)
+			newmeshlet.vertices.insert(fvit->idx());
+	}
+	ShapeHeal newdetect;
+	newdetect.topotype = Unchecked;
+
+	mymeshlets.push_back(newmeshlet);
+	detecters.push_back(newdetect);
+
+}
+
+void NewCluster::GrowFaceSet(const MyMesh& mesh, std::unordered_set<uint>& newfaceset, std::unordered_set<uint>& faceset, uint seedface, uint cutlimit)
+{
+	std::deque<uint> fifo;
+	fifo.push_back(seedface);
+
+	while (newfaceset.size() < cutlimit) {
+		uint faceid = fifo.front();
+		fifo.pop_front();
+
+		if (newfaceset.find(faceid) != newfaceset.end())
+			continue;
+
+		faceset.erase(faceid);
+		newfaceset.insert(faceid);
+
+
+		auto fh = mesh.face_handle(faceid);
+		for (auto ffit = mesh.cff_iter(fh); ffit.is_valid(); ++ffit) {
+			if (faceset.find(ffit->idx()) != faceset.end())
+				fifo.push_back(ffit->idx());
+		}
+	}
+
+}
+
+void NewCluster::GrowFaceSet(const MyMesh& mesh, std::unordered_set<uint>& newfaceset, std::unordered_set<uint>& faceset, std::vector<uint> seedfaces, uint cutlimit)
+{
+	std::deque<uint> fifo;
+	for(auto&face:seedfaces)
+		fifo.push_back(face);
+
+	while (newfaceset.size() < cutlimit) {
+		uint faceid = fifo.front();
+		fifo.pop_front();
+
+		if (newfaceset.find(faceid) != newfaceset.end())
+			continue;
+
+		faceset.erase(faceid);
+		newfaceset.insert(faceid);
+
+
+		auto fh = mesh.face_handle(faceid);
+		for (auto ffit = mesh.cff_iter(fh); ffit.is_valid(); ++ffit) {
+			if (faceset.find(ffit->idx()) != faceset.end())
+				fifo.push_back(ffit->idx());
+		}
+	}
+}
+
+void NewCluster::GenerateTorusNewFaceStart(const MyMesh& mesh, const std::vector<std::vector<uint>>& loops, uint mid)
+{
+	auto& detector = detecters[mid];
+	auto& meshlet = mymeshlets[mid];
+
+	uint he = loops[0][0];
+	auto heh = mesh.halfedge_handle(he);
+	auto startfh = mesh.face_handle(heh);
+	uint startidx = startfh.idx();
+
+	std::unordered_set<uint> targetfaces;
+	for (auto& heid : loops[1]) {
+		auto heidh = mesh.halfedge_handle(heid);
+		auto fh = mesh.face_handle(heidh);
+		targetfaces.insert(fh.idx());
+	}
+
+	std::vector<std::vector<std::pair<uint,int>>> depthrecord;
+
+
+	auto res = BFS(mesh, startidx, targetfaces,mymeshlets[mid].faces);
+	for (auto& face : res)
+		detector.newfacestart.push_back(face);
+}
+
+std::vector<uint> NewCluster::BFS(const MyMesh& mesh, uint startidx, const std::unordered_set<uint>& targets, const std::unordered_set<uint>& faceset)
+{
+	std::unordered_set<uint> visited;
+
+	std::vector<std::vector<std::pair<uint, int>>> depthrecord;
+	std::vector<std::pair<uint, int>> startdepth{ std::pair<uint, int>{startidx, -1}};
+	depthrecord.push_back(startdepth);
+	visited.insert(startidx);
+	bool sign = false;
+	uint mytarget;
+	uint layer = 0;
+	uint pre;
+
+	do {
+		auto& currentdepth = depthrecord[layer];
+		std::vector<std::pair<uint, int>> nextdepth;
+
+		for (auto& elem : currentdepth) {
+			auto fidx = elem.first;
+			auto fh = mesh.face_handle(fidx);
+			for (auto ffit = mesh.cff_iter(fh); ffit.is_valid(); ++ffit) {
+				if (faceset.find(ffit->idx()) == faceset.end())
+					continue;
+
+				if (visited.find(ffit->idx()) == visited.end()) {
+					nextdepth.push_back(std::pair<uint, int>{ffit->idx(), elem.first});
+					visited.insert(ffit->idx());
+				}
+				if (targets.find(ffit->idx()) != targets.end()) {
+					sign = true;
+					mytarget = ffit->idx();
+
+					break;
+				}
+			}
+			if (sign == true)
+				break;
+		}
+		depthrecord.push_back(nextdepth);
+		layer++;
+
+	} while (sign == false);
+	std::vector<uint> res{ mytarget };
+
+	for (uint i = depthrecord.size() - 1; i != 0; --i) {
+		for(auto&elem:depthrecord[i])
+			if (elem.first == res.back()) {
+				res.push_back(elem.second);
+				break;
+			}
+	}
+	assert(res.back() == startidx);
+	return res;
+
 }

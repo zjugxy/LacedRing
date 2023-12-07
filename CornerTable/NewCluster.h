@@ -33,12 +33,27 @@ struct EwireBuildSet {
 	SpecialTopo sign = Normal;
 };
 
+enum TopoHeal {
+	Unchecked,
+	Correct,
+	Torus,
+	SharpConnect
+};
+
+struct ShapeHeal {
+	std::unordered_set<uint> halfedgeset;
+	TopoHeal topotype = Unchecked;
+	std::vector<uint> specialpnts;
+	std::vector<uint> newfacestart;
+};
+
 class NewCluster
 {
 public:
 
 	std::vector<Meshlet_built> mymeshlets;
 	std::vector<std::vector<int>> oldmeshlets;
+	std::vector<ShapeHeal> detecters;
 	//
 	//std::vector<std::vector<uint>> Ewires;
 	size_t nfaces;
@@ -47,6 +62,7 @@ public:
 	std::vector<std::vector<uint>> gloewires;
 	std::vector<uint> lateaddress_surred;
 	std::vector<uint> lateaddress_inc;
+	std::vector<EwireBuildSet> buildsets;
 
 public:
 	NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh);
@@ -71,5 +87,21 @@ private:
 	void PackAndCheck(std::vector<std::vector<uint>>& ewires , const std::unordered_set<uint>& corners, std::deque<uint>& edgewire, const MyMesh& mesh);
 	void BuildGloEwires(std::vector<EwireBuildSet>& buildsets);
 	void ReorderAndCheck(EwireBuildSet& buildset);
+
+	void TryShapeHeal(const MyMesh& mesh);
+	bool ShapeErrorDetect(const MyMesh& mesh, uint mid);
+
+	void TorusHeal(const MyMesh& mesh, uint mid);
+	void SharpConnectHeal(const MyMesh& mesh, uint mid);
+	void GrowFaceSet(const MyMesh& mesh, std::unordered_set<uint>& newfaceset,
+		std::unordered_set<uint>& faceset, uint seedface, uint cutlimit);
+	void GrowFaceSet(const MyMesh& mesh, std::unordered_set<uint>& newfaceset,
+		std::unordered_set<uint>& faceset, std::vector<uint> seedfaces, uint cutlimit);
+
+	void GenerateTorusNewFaceStart(const MyMesh& mesh, const std::vector<std::vector<uint>>& loops, uint mid);
+	
+	std::vector<uint> BFS(const MyMesh& mesh, uint startidx,const std::unordered_set<uint>& targets,
+		const std::unordered_set<uint>& faceset);
+
 };
 
