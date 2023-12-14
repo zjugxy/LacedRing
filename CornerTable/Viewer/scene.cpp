@@ -369,6 +369,53 @@ namespace glfwviewer {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
+    void Scene::LoadGPULW( NewLWGenerator& nlwn)
+    {
+        //
+        gpulwobj.Desinfo = &nlwn.Desinfo;
+        gpulwobj.DesLoc = &nlwn.DesLoc;
+        gpulwobj.newintercon = &nlwn.newintercon;
+        gpulwobj.intergeo = &nlwn.intergeo;
+        gpulwobj.newextercon = &nlwn.newextercon;
+        gpulwobj.extergeo = &nlwn.extergeo;
+
+        glGenBuffers(1, &gpulwobj.LWdesloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWdesloc);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.DesLoc->size() * sizeof(uint), gpulwobj.DesLoc->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, gpulwobj.LWdesloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWdesinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWdesinfo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.Desinfo->size() * sizeof(uint), gpulwobj.Desinfo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, gpulwobj.LWdesinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWintercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWintercon);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.newintercon->size() * sizeof(uint), gpulwobj.newintercon->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, gpulwobj.LWintercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWextercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWextercon);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.newextercon->size() * sizeof(uint), gpulwobj.newextercon->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, gpulwobj.LWextercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWintergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWintergeo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.intergeo->size() * sizeof(float), gpulwobj.intergeo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, gpulwobj.LWintergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWextergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWextergeo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.extergeo->size() * sizeof(float), gpulwobj.extergeo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, gpulwobj.LWextergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
 
     void Scene::renderCT() {
 
@@ -470,6 +517,11 @@ namespace glfwviewer {
 
         glDrawMeshTasksNV(0, swobj.simplemeshlets->size());
 
+    }
+
+    void Scene::renderGPULW()
+    {
+        glDrawMeshTasksNV(0, gpulwobj.DesLoc->size());
     }
 
 

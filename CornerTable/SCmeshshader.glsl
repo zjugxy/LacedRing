@@ -47,7 +47,7 @@ void main(){
 
 	//每个线程处理顶点
 
-
+	if(mi==1){
 
 		uint add = threadid;
 		while(add<meshlet.vertex_cnt){
@@ -73,5 +73,5 @@ void main(){
 		if(threadid==0)
 			gl_PrimitiveCountNV = meshlet.primcnt;
 	
-	
+	}
 }

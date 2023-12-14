@@ -176,6 +176,8 @@
     <None Include="geometryshader.glsl" />
     <None Include="IXmeshshader.glsl" />
     <None Include="Lacemeshshader.glsl" />
+    <None Include="PointLacemeshshader.glsl" />
+    <None Include="PointSimpleLaceWiremeshshader.glsl" />
     <None Include="ringfrag.glsl" />
     <None Include="ringvertex.glsl" />
     <None Include="SimpleLaceWiremeshshader.glsl" />

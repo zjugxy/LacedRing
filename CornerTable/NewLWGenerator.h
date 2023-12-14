@@ -29,6 +29,20 @@ struct LWbuilder
 	std::unordered_set<uint> borderset;
 };
 
+struct MeshletDes
+{
+	uchar ewirenum;
+	uchar color[3];
+	uchar irrnum;
+	uchar numvertex;
+	uchar useless1;
+	uchar useless2;
+	uint ingeolocation;// 6+ 26
+	uint inconlocation;
+	std::vector<uint> exgeolocation;//1+5+26
+	std::vector<uint> exconlocation;
+};
+
 
 
 class NewLWGenerator
@@ -45,10 +59,17 @@ public:
 	std::vector<vec4> geoinfo;
 	std::vector<uchar> priminfo;
 	// gpu lw
-	std::vector<uint> PositionInfo;
-	std::vector<uint> DesInfo;
-	std::vector<float> Intermesh;
-	std::vector<float> Extermesh;
+	std::vector<uint> DesLoc;
+	std::vector<uint> Desinfo;
+
+	std::vector<uint> newintercon;
+	std::vector<uint> newextercon;
+	std::vector<uchar> intercon;//inter: left,right,irregular
+	std::vector<uchar> extercon;//exter: left,right
+	std::vector<float> intergeo;
+	std::vector<float> extergeo;
+
+
 
 public:
 	NewLWGenerator(const NewCluster& nclu);

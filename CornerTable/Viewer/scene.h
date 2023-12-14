@@ -148,6 +148,18 @@ namespace glfwviewer {
 
 	};
 
+	struct SceneGPULW {
+		const std::vector<uint>* DesLoc;
+		const std::vector<uint>* Desinfo;
+
+		const std::vector<uint>* newintercon;//inter: left,right,irregular
+		const std::vector<uint>* newextercon;//exter: left,right
+		const std::vector<float>* intergeo;
+		const std::vector<float>* extergeo;
+
+		GLuint LWdesloc, LWdesinfo, LWintercon, LWextercon, LWintergeo, LWextergeo;
+	};
+
 
 	class Scene
 	{
@@ -171,6 +183,7 @@ namespace glfwviewer {
 		SceneRenderWirePoint pntobj;
 		SceneRenderInterWire interobj;
 		SceneRenderSimpleWire swobj;
+		SceneGPULW gpulwobj;
 
 	public:
 		Scene();
@@ -207,12 +220,13 @@ namespace glfwviewer {
 		void LoadSCMeshlet(MyMesh mesh, Meshlets meshlets);
 		void LoadSimpleWireMeshlet(const LaceWireGenerator& lwn);
 		void LoadSimpleWireMeshlet(const NewLWGenerator& nlwn);
-
+		void LoadGPULW(NewLWGenerator& nlwn);
 
 		void renderTSML();
 		void renderIXML();
 		void renderSCML();
 		void renderSWML();
+		void renderGPULW();
 	};
 
 }

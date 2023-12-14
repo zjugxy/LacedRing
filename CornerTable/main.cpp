@@ -17,7 +17,7 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/wtbunny.obj";
+    std::string filename = "E:/OpenMesh/horse.obj";
     // generate vertices
     try
     {
@@ -61,7 +61,9 @@ int main()
         glfwviewer::Scene myscene;
         myscene.LoadCornerTable(mesh);
 
-        if (1) {
+        int flag = 2;
+
+        if (flag == 0) {
             myscene.LoadSCMeshlet(mesh, meshlets);
             myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
@@ -81,19 +83,39 @@ int main()
             glfwTerminate();
             exit(EXIT_SUCCESS);
         }
-        else {
+        else if(flag ==1){
 
             myscene.LoadSimpleWireMeshlet(nlwgen);
-            myscene.LoadInternalWire(mesh, nlwgen);
+            //myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
             myview.set(&myscene);
-            myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
+            myview.setMeshshader("PointSimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
             myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
 
             while (!glfwWindowShouldClose(myview.MYwindow()))
             {
                 myview.processinput();
                 myview.RenderSWML();
+                myview.RenderWireLine();
+                //myview.RenderInterWire();
+                glfwSwapBuffers(myview.MYwindow());
+                glfwPollEvents();
+            }
+            glfwTerminate();
+            exit(EXIT_SUCCESS);
+        }
+        else {
+            myscene.LoadGPULW(nlwgen);
+            //myscene.LoadInternalWire(mesh, nlwgen);
+            myscene.LoadLaceWire(mesh, nclu);
+            myview.set(&myscene);
+            myview.setMeshshader("Lacemeshshader.glsl", "TSfragshader.glsl");
+            myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
+
+            while (!glfwWindowShouldClose(myview.MYwindow()))
+            {
+                myview.processinput();
+                myview.RenderFINALLWML();
                 myview.RenderWireLine();
                 //myview.RenderInterWire();
                 glfwSwapBuffers(myview.MYwindow());

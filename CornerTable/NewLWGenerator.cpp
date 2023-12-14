@@ -35,6 +35,7 @@ void NewLWGenerator::FUNC(const MyMesh& mesh)
 	InternalWireGenerator(mesh);
 	LeftRightGenertor(mesh);
 	PackSimpleLaceWire(mesh);
+	PackGPULW(mesh);
 }
 
 void NewLWGenerator::InternalWireGenerator(const MyMesh& mesh)
@@ -493,104 +494,139 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 	std::mt19937 gen(rd());
 	std::uniform_real_distribution<float> dis(0.0, 1.0);
 
-	//
-	std::vector<uint> interrecord;
-	std::vector<uint> exterrecord;
-	//pack intermesh
-	for (uint mid = 0; mid < targets.size(); mid++) {
-		interrecord.push_back(Intermesh.size());
+	std::vector<MeshletDes> records;
+	records.resize(targets.size());
 
-		auto& target = targets[mid];
+	//pack inter geo
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		auto& intermesh = targets[mid].InternalLW;
+		uint vertexnum;
+		if (intermesh.vertex[0] == EMPTYWIRE)
+			vertexnum = 0;
+		else
+			vertexnum = intermesh.vertex.size();
 
-		std::vector<uchar> vec;
-		vec.push_back(static_cast<uchar>(vidxmaps[mid].size()));
-		vec.push_back(uchar(0));
-		vec.push_back(static_cast<uchar>(target.InternalLW.irregular.size() / 3));
+		records[mid].ewirenum = static_cast<uchar>(targets[mid].ewireidx.size());
+		records[mid].irrnum = static_cast<uchar>(intermesh.irregular.size()/3);
+		records[mid].numvertex = static_cast<uchar>(internalbuilders[mid].vertices.size());
 
-		assert(vidxmaps[mid].size() == target.InternalLW.left.size());
-		if (target.InternalLW.vertex[0] != EMPTYWIRE) {
-			for (auto& elem : target.InternalLW.left)
-				vec.push_back(elem);
-			for (auto& elem : target.InternalLW.right)
-				vec.push_back(elem);
-		}
-		for (auto& elem : target.InternalLW.irregular)
-			vec.push_back(elem);
+		records[mid].color[0] = static_cast<uchar>(dis(gen) * 255);
+		records[mid].color[1] = static_cast<uchar>(dis(gen) * 255);
+		records[mid].color[2] = static_cast<uchar>(dis(gen) * 255);
 
-		while (vec.size()%4 != 0)
-		{
-			vec.push_back(0);
-		}
-		vec[1] = vec.size() / 4;
+		records[mid].useless1 = 0;
+		records[mid].useless2 = 0;
 
-		for (uint i = 0; i < vec.size(); i += 4) {
-			Intermesh.push_back(PackChar4Float(vec[i], vec[i + 1], vec[i + 2], vec[i + 3]));
-		}
-		Intermesh.push_back(dis(gen));
-		Intermesh.push_back(dis(gen));
-		Intermesh.push_back(dis(gen));
-
-		for (auto& elem : target.InternalLW.vertex) {
-			if (elem == EMPTYWIRE)
-				break;
-			else {
-				auto pnt = mesh.point(mesh.vertex_handle(elem));
-				Intermesh.push_back(pnt[0]);
-				Intermesh.push_back(pnt[1]);
-				Intermesh.push_back(pnt[2]);
+		uint location = intergeo.size();
+		location = location | (vertexnum << 26);
+		records[mid].ingeolocation = location;
+		records[mid].inconlocation = intercon.size()/4;
+		
+		if (vertexnum != 0) {
+			for (auto& ver : intermesh.vertex) {
+				auto vh = mesh.vertex_handle(ver);
+				auto pnt = mesh.point(vh);
+				intergeo.push_back(pnt[0]);
+				intergeo.push_back(pnt[1]);
+				intergeo.push_back(pnt[2]);
 			}
+
+			assert(intermesh.left.size() == intermesh.vertex.size());
+			assert(intermesh.left.size() == intermesh.right.size());
+
+			for (auto& elem : intermesh.left)
+				intercon.push_back(elem);
+			for (auto& elem : intermesh.right)
+				intercon.push_back(elem);
 		}
+		
+		for (auto& elem : intermesh.irregular)
+			intercon.push_back(elem);
 
-	}
-
-	//pack external
-	for (auto& ewire : gloEwires) {
-		exterrecord.push_back(Extermesh.size());
-		std::vector<uchar> vec;
-		vec.push_back(static_cast<uchar>(ewire.vertex.size()));
-		vec.push_back(uchar(0));
-
-		for (auto& elem : ewire.left)
-			vec.push_back(elem);
-		for (auto& elem : ewire.right)
-			vec.push_back(elem);
-		while (vec.size() % 4 != 0)
+		while (intercon.size()%4!=0)
 		{
-			vec.push_back(0);
-		}
-		vec[1] = vec.size() / 4;
-		for (uint i = 0; i < vec.size(); i += 4) {
-			Extermesh.push_back(PackChar4Float(vec[i], vec[i + 1], vec[i + 2], vec[i + 3]));
-		}
-
-		for (auto& elem : ewire.vertex) {
-			auto pnt = mesh.point(mesh.vertex_handle(elem));
-			Intermesh.push_back(pnt[0]);
-			Intermesh.push_back(pnt[1]);
-			Intermesh.push_back(pnt[2]);
+			intercon.push_back(0);
 		}
 	}
-	
-	assert(Extermesh.size() < 0xEFFFFFFF);
+
+	assert(intergeo.size() < (0xFFFFFFFF >> 6));
+	assert(intercon.size() < 0xFFFFFFFF);
+
+	//pack globol ewire
+	std::vector<uint> Econloc;
+	std::vector<uint> Egeoloc;
+	for (auto& wire : gloEwires) {
+		Egeoloc.push_back(extergeo.size());
+		Econloc.push_back(extercon.size()/4);
+
+		for (auto& ver : wire.vertex) {
+			auto vh = mesh.vertex_handle(ver);
+			auto pnt = mesh.point(vh);
+			extergeo.push_back(pnt[0]);
+			extergeo.push_back(pnt[1]);
+			extergeo.push_back(pnt[2]);
+		}
+
+		for (auto& elem : wire.left)
+			extercon.push_back(elem);
+		for (uint i = 0; i < wire.right.size(); ++i)
+			extercon.push_back(wire.right[wire.right.size() - i - 1]);
+
+		while (extercon.size() % 4 != 0)
+		{
+			extercon.push_back(0);
+		}
+
+		assert(wire.right.size() == wire.left.size());
+		assert(wire.right.size() == wire.vertex.size());
+	}
+
+	assert(extergeo.size() < (0xFFFFFFFF >> 6));
+	assert(extercon.size() < 0xFFFFFFFF);
 
 	for (uint mid = 0; mid < targets.size(); ++mid) {
-		PositionInfo.push_back(DesInfo.size());
-		uchar vertexcnt = static_cast<uchar>(vidxmaps[mid].size());
-		uchar ewirecnt = static_cast<uchar>(targets[mid].ewireidx.size());
-		uchar primcnt = 2 * (targets[mid].InternalLW.vertex.size() - 1) + vertexcnt - targets[mid].InternalLW.vertex.size();
-		DesInfo.push_back(PackChar4Uint(vertexcnt, ewirecnt, primcnt, 0));
+		int cnt = 0;
+		for (auto& id : targets[mid].ewireidx) {
 
-		DesInfo.push_back(interrecord[mid]);
+			uint location = Egeoloc[id];
+			uint num = gloEwires[id].vertex.size();
+			assert(num < 32);
+			location = location | (num << 26);
+			if (targets[mid].reverse[cnt] == true)
+				location = location | 0x80000000;
 
-		for (uint i = 0; i < targets[mid].ewireidx.size(); i++) {
-			if (targets[mid].reverse[i] == false) {
-				DesInfo.push_back(exterrecord[targets[mid].ewireidx[i]]);
-			}
-			else {
-				DesInfo.push_back(exterrecord[targets[mid].ewireidx[i]]|REVERSEFLAG);
-			}
+			records[mid].exgeolocation.push_back(location);
+			records[mid].exconlocation.push_back(Econloc[id]);
+			cnt++;
 		}
 	}
+
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		DesLoc.push_back(Desinfo.size());
+		Desinfo.push_back(PackChar4Uint(records[mid].ewirenum, records[mid].color[0],
+			records[mid].color[1], records[mid].color[2]));
+
+		Desinfo.push_back(PackChar4Uint(records[mid].irrnum, records[mid].numvertex,
+			records[mid].useless1, records[mid].useless2));
+
+		Desinfo.push_back(records[mid].ingeolocation);
+		Desinfo.push_back(records[mid].inconlocation);
+		for (auto& elem : records[mid].exgeolocation)
+			Desinfo.push_back(elem);
+		for (auto& elem : records[mid].exconlocation)
+			Desinfo.push_back(elem);
+	}
+
+	assert(Desinfo.size() < 0xFFFFFFFF);
+
+	assert(extercon.size() % 4 == 0);
+	assert(intercon.size() % 4 == 0);
+	for (uint i = 0; i < extercon.size(); i += 4)
+		newextercon.push_back(PackChar4Uint(extercon[i], extercon[i + 1], extercon[i + 2], extercon[i + 3]));
+
+	for (uint i = 0; i < intercon.size(); i += 4)
+		newintercon.push_back(PackChar4Uint(intercon[i], intercon[i + 1], intercon[i + 2], intercon[i + 3]));
+
 }
 
 std::array<uchar, 4> NewLWGenerator::DiscomposeUint(uint value) {

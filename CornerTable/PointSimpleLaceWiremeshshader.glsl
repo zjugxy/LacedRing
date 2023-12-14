@@ -5,7 +5,7 @@
 
 layout(local_size_x=GROUP_SIZE) in;
 layout(max_vertices=64, max_primitives=150) out;
-layout(triangles) out;
+layout(points) out;
 
 
 layout(std430,binding = 1) readonly buffer geoinfo{
@@ -45,9 +45,9 @@ void main(){
 	uint mi = gl_WorkGroupID.x;
 	uint threadid = gl_LocalInvocationID.x;
 	Simple_meshlet meshlet = meshlets[mi];
-
-	//每个线程处理顶点
 	if(mi==1){
+	//每个线程处理顶点
+
 
 		uint add = threadid;
 		while(add<meshlet.vertex_cnt){
@@ -58,16 +58,11 @@ void main(){
 			add+=GROUP_SIZE;
 		}
 
-		add = threadid;
-		while(add<meshlet.primcnt){
-			uint start = meshlet.primbegin + add*3;
-			gl_PrimitiveIndicesNV[add*3] = uint(primidx[start]);
-			gl_PrimitiveIndicesNV[add*3+1] = uint(primidx[start+1]);
-			gl_PrimitiveIndicesNV[add*3+2] = uint(primidx[start+2]);
-			add+=GROUP_SIZE;
+		for(int i=0;i+threadid<meshlet.vertex_cnt;i+=GROUP_SIZE){
+			gl_PrimitiveIndicesNV[i+threadid] = i+threadid;
 		}
 
 		if(threadid==0)
-			gl_PrimitiveCountNV = meshlet.primcnt;
-}	
+			gl_PrimitiveCountNV = meshlet.vertex_cnt;
+	}
 }
