@@ -18,11 +18,8 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/Models/horse/horse.obj";
+    std::string filename = "E:/OpenMesh/Models/head/head.obj";
     // generate vertices
-
-    MeshFile fileaddressor;
-    bool fileexist = fileaddressor.ImportFile(filename);
 
     try
     {
@@ -38,7 +35,7 @@ int main()
         return 1;
     }
 
-    meshletfilename = changeFileExtension(filename, "meshlet");
+
 
     //meshlets = readVectorFromFile(meshletfilename);
     //if (!meshlets.empty()) {
@@ -54,10 +51,6 @@ int main()
         NewCluster nclu(64, 126,mesh);
         meshlets = nclu.oldmeshlets;
 
-
-        //LaceWireGenerator lwgen;
-        //clu.PackintoLaceWire(lwgen.Ewires, lwgen.meshlets, lwgen.Dual2idx);
-        //lwgen.InternalWireGeneraotr(mesh);
         NewLWGenerator nlwgen(nclu);
         nlwgen.FUNC(mesh);
     
@@ -68,27 +61,20 @@ int main()
         myview.initGLFW();
         glfwviewer::Scene myscene;
         myscene.LoadCornerTable(mesh);
-        if (fileexist == false) {
-            nlwgen.ExportFile(filename);
-            std::cout << "file contrust down" << std::endl;
-            std::cout << "reopen program" << std::endl;
-            return 0;
-        }
-        else {
-            myscene.LoadGPULW(fileaddressor);
-            
-        }
+
+
 
 
         int flag = 2;
 
         if (flag == 0) {
             myscene.LoadSCMeshlet(mesh, meshlets);
-            myscene.LoadInternalWire(mesh, nlwgen);
-            myscene.LoadLaceWire(mesh, nclu);
-            myscene.LoadNormalLine(nclu);
+            myscene.LoadPoints(mesh);
+            //myscene.LoadInternalWire(mesh, nlwgen);
+            //myscene.LoadLaceWire(mesh, nclu);
+            //myscene.LoadNormalLine(nclu);
 
-
+            myscene.LoadLines(mesh, meshlets);
             myview.set(&myscene);
             myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
             myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
@@ -97,7 +83,9 @@ int main()
             {
                 myview.processinput();
                 myview.RenderSCML();
-                myview.RenderWireLine();
+                myview.RenderPoint();
+                myview.RenderNormalLine();
+                //myview.RenderWireLine();
                 //myview.RenderNormalLine();
                 //myview.RenderInterWire();
                 glfwSwapBuffers(myview.MYwindow());
@@ -128,9 +116,9 @@ int main()
             exit(EXIT_SUCCESS);
         }
         else {
-            if(fileexist == false)
-                myscene.LoadGPULW(nlwgen);
-            //myscene.LoadInternalWire(mesh, nlwgen);
+
+            myscene.LoadGPULW(nlwgen);
+            myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
             myview.set(&myscene);
             myview.setMeshshader("Lacemeshshader.glsl", "TSfragshader.glsl");

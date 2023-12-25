@@ -53,7 +53,10 @@ namespace glfwviewer {
 
 		virtual void RenderWireLine();
 		virtual void RenderWirePnt();
+		virtual void RenderPoint();
 		virtual void RenderInterWire();
+
+
 		//input func below
 		virtual void initGLFW();
 		virtual void processinput();

@@ -33,10 +33,14 @@ struct MeshletDes
 {
 	uchar ewirenum;
 	uchar color[3];
+
 	uchar irrnum;
 	uchar numvertex;
-	uchar useless1;
-	uchar useless2;
+	uchar numinver;
+	uchar ingeostart;
+
+	std::vector<uchar> numexver;
+
 	uint ingeolocation;// 6+ 26
 	uint inconlocation;
 	std::vector<uint> exgeolocation;//1+5+26

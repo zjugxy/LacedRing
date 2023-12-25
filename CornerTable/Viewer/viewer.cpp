@@ -30,9 +30,9 @@ namespace glfwviewer {
 		camera()->setTarget(viewdir);
 		camera()->setCenter(center - viewdir * viewdist);
 		camera()->setUp(vec3(0, 1, 0));
-		camera()->frustum()->setNearplane(radius / 10);
+		camera()->frustum()->setNearplane(radius / 100);
 		camera()->frustum()->setFarplane(radius * 10);
-		camera()->mover()->setStepsize(radius / 20);
+		camera()->mover()->setStepsize(radius / 200);
 		m_light.lightpos = camera()->center()+m_camera.up()*radius;
 	}
 
@@ -381,6 +381,20 @@ namespace glfwviewer {
 
 
 		 m_scene->renderWirePnt();
+	 }
+
+	 void Viewer::RenderPoint()
+	 {
+		 m_line_shader.use();
+
+
+		 glm::mat4 model = glm::mat4(1.0f);
+		 m_line_shader.setMat4("projection", m_camera.projMatrix());
+		 m_line_shader.setMat4("view", m_camera.viewMatrix());
+		 m_line_shader.setMat4("model", model);
+
+
+		 m_scene->renderPoints();
 	 }
 
 	 void Viewer::RenderInterWire()

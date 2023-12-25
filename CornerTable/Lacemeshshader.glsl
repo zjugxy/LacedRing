@@ -101,29 +101,32 @@ void main(){
 	uint irrnum = AnaUint(DesInfo[start+1],0);
 	uint numvertex = AnaUint(DesInfo[start+1],1);
 
-	uint intergeolocation = DesInfo[start+2];
-    uint interconlocation = DesInfo[start+3];
-    uint exterstartgeolocation = DesInfo[start+4];
-    uint exterstartconlocation = DesInfo[start+4+ewirenum];
+    uint intergeonum = AnaUint(DesInfo[start+1],2);
+    uint ingeostart = AnaUint(DesInfo[start+1],3);
 
-	uint intergeonum = (intergeolocation & INGEOMASK)>>26;
-	uint intergeorealloc = intergeolocation & 0x03FFFFFF;
+
+	uint intergeolocation = DesInfo[start+ingeostart];
+    uint interconlocation = DesInfo[start+ingeostart+1];
+    uint exterstartgeolocation = DesInfo[start+ingeostart+2];
+    uint exterstartconlocation = DesInfo[start+2+ingeostart+ewirenum];
+
     exvernum = numvertex - intergeonum;
 
 	uint pretemp = 0;
 	for(int i=0;i<ewirenum;i++){
-		uint exloc = DesInfo[start+4 + i];
-		uint exnum = (exloc>>26) & (0x001F);
-        ewirevernum[i] = exnum;
-		presum[i] = exnum+pretemp-1;
+
+		uint exnum = AnaUint(DesInfo[start+2+i/4],i%4);
+
+        ewirevernum[i] = exnum&0x7F;
+		presum[i] = (exnum&0x7F) +pretemp-1;
 		pretemp = presum[i];
-		reverse[i] = (exloc & 0x80000000)!=0;
+		reverse[i] = (exnum & 0x80)!=0;
 	}
 
 
 //vertex part
 	for(int i = 0; i+threadid<intergeonum;i+=GROUP_SIZE){
-			uint ingeostart = intergeorealloc + (i+threadid)*3;
+			uint ingeostart = intergeolocation + (i+threadid)*3;
 			vec4 vergeo = vec4(InterGeo[ingeostart],InterGeo[ingeostart+1],InterGeo[ingeostart+2],1.0f);
 			gl_MeshVerticesNV[i+threadid].gl_Position = projection*view*model*vergeo;
 			v_out[i+threadid].color = meshletcolor;
@@ -139,7 +142,7 @@ void main(){
             vertexid = i+threadid - temp;
         else
             vertexid = presum[wireid] - (i+threadid);
-        uint geoloc = (DesInfo[start+4+wireid])&0x03FFFFFF;
+        uint geoloc = (DesInfo[start+2+ingeostart+wireid]);
         geoloc = geoloc + vertexid*3;
         vec4 vergeo = vec4(ExterGeo[geoloc],ExterGeo[geoloc+1],ExterGeo[geoloc+2],1.0f);
         gl_MeshVerticesNV[i+threadid+intergeonum].gl_Position = projection*view*model*vergeo;
@@ -168,7 +171,7 @@ void main(){
 
     for(int i = 0; i+threadid < numvertex - intergeonum;i+=GROUP_SIZE){
         uint wireid = FindWireId(i+threadid,ewirenum);
-        uint constart = DesInfo[start+4+ewirenum+wireid];
+        uint constart = DesInfo[start+2+ingeostart+ewirenum+wireid];
         uint temp = 0;
         if(wireid!=0)
             temp = presum[wireid-1];

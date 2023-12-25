@@ -105,6 +105,8 @@ private:
 
 	void TorusHeal(const MyMesh& mesh, uint mid);
 	void SharpConnectHeal(const MyMesh& mesh, uint mid);
+	void NewSharpConnectHeal(const MyMesh& mesh, uint mid);
+
 	void GrowFaceSet(const MyMesh& mesh, std::unordered_set<uint>& newfaceset,
 		std::unordered_set<uint>& faceset, uint seedface, uint cutlimit);
 	void GrowFaceSet(const MyMesh& mesh, std::unordered_set<uint>& newfaceset,

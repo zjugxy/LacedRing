@@ -45,7 +45,7 @@ void main(){
 
 	//每个线程处理顶点
 
-
+	if((mi==1638)){
 		uint add = threadid;
 		while(add<meshlet.vertex_cnt){
 			uint gloveridx = meshlet.vertex_begin+add;
@@ -69,6 +69,6 @@ void main(){
 
 		if(threadid==0)
 			gl_PrimitiveCountNV = meshlet.primcnt;
-	
+	}
 	
 }

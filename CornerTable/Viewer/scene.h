@@ -168,6 +168,11 @@ namespace glfwviewer {
 		GLuint VBO;
 	};
 
+	struct SceneRenderPoint {
+		std::vector<vec3> points;
+		GLuint VAO;
+		GLuint VBO;
+	};
 
 	class Scene
 	{
@@ -193,6 +198,7 @@ namespace glfwviewer {
 		SceneRenderSimpleWire swobj;
 		SceneGPULW gpulwobj;
 		SceneRenderNormal normalobj;
+		SceneRenderPoint pointobj;
 
 	public:
 		Scene();
@@ -211,7 +217,10 @@ namespace glfwviewer {
 		void LoadInternalWire(const MyMesh& mesh ,const LaceWireGenerator& lwn);
 		void LoadInternalWire(const MyMesh& mesh, const NewLWGenerator& nlwn);
 		void LoadNormalLine(const NewCluster& nclu);
-		
+		void LoadPoints(const MyMesh& mesh);
+		void LoadLines(const MyMesh& mesh,Meshlets meshlet);
+
+
 		void renderML();
 		void renderCT();
 		void renderCTring();
@@ -221,6 +230,7 @@ namespace glfwviewer {
 		void renderInterWire();
 		void renderWirePnt();
 		void renderNormalLine();
+		void renderPoints();
 		//void renderobjs();
 
 

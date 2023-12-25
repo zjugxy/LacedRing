@@ -1,9 +1,13 @@
 #include "NewCluster.h"
 #include <Eigen/Dense>
+#include<chrono>
+
 bool CompareScores(const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b);
 
 NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh)
 {
+	auto startTime = std::chrono::steady_clock::now();
+
 	nfaces = mesh.n_faces();
 	nvertices = mesh.n_vertices();
 
@@ -165,11 +169,27 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh)
 
 	//可以在这里做一个模拟退火？
 	// cut sharp triangles
-	
+	auto endTime = std::chrono::steady_clock::now();
+	std::cout << "first cluster down" << std::endl;
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
+
+	 startTime = std::chrono::steady_clock::now();
 	//识别环条状meshlet以及近似还条状的meshlet,记录并分割
 	while (SharpTriCut(mesh)) {};
+	std::cout << "sharp cut down" << std::endl;
+	 endTime = std::chrono::steady_clock::now();
+	std::cout << "first cluster down" << std::endl;
+	 duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
 
+	 startTime = std::chrono::steady_clock::now();
 	TryShapeHeal(mesh);
+	std::cout << "shape heal down" << std::endl;
+	 endTime = std::chrono::steady_clock::now();
+	std::cout << "first cluster down" << std::endl;
+	 duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
 
 	PackOldmeshlets();
 	GenerateEwire(mesh);
@@ -668,6 +688,8 @@ bool NewCluster::SharpTriCut(const MyMesh& mesh)
 
 	std::vector<FaceCandidate> candidates;
 	//初始化每一个triangle 对应的meshlet id
+	std::vector<uint> SingleTriMeshlets;
+	std::vector<uint> NeighBoor;
 
 	std::vector<Eigen::Vector3d> centroids;
 	std::vector<Eigen::Vector3d> normals;
@@ -715,6 +737,11 @@ bool NewCluster::SharpTriCut(const MyMesh& mesh)
 				temp.cost = EvaluateCost(centroids[mid],normals[mid],face2meshlet,face,mesh);
 				candidates.push_back(temp);
 			}	
+
+			if ((meshletsids.size() == 3) && (meshletsids[0] == meshletsids[1]) && (meshletsids[0] == meshletsids[2])) {
+				SingleTriMeshlets.push_back(mid);
+				NeighBoor.push_back(meshletsids[0]);
+			}
 		}
 	}
 
@@ -725,6 +752,21 @@ bool NewCluster::SharpTriCut(const MyMesh& mesh)
 	{
 		return a.cost > b.cost;
 	});
+
+	
+	for (uint i = 0; i < SingleTriMeshlets.size(); ++i) {
+		assert(mymeshlets[SingleTriMeshlets[i]].faces.size() == 1);
+		uint faceid = *mymeshlets[SingleTriMeshlets[i]].faces.begin();
+		uint neighmeshletid = NeighBoor[i];
+		
+		if (mymeshlets[neighmeshletid].faces.size() >= maxf)
+			continue;
+
+		mymeshlets[neighmeshletid].faces.insert(faceid);
+		mymeshlets[SingleTriMeshlets[i]].faces.clear();
+		mymeshlets[SingleTriMeshlets[i]].vertices.clear();
+	}
+
 
 	for (auto& elem : candidates) {
 		auto face = elem.faceid;
@@ -749,6 +791,13 @@ bool NewCluster::SharpTriCut(const MyMesh& mesh)
 			if (face2meshlet[fhit->opp().face().idx()] == mid)
 				mymeshlets[mid].vertices.erase(fhit->next().to().idx());
 		}
+	}
+
+	for (auto it = mymeshlets.begin(); it != mymeshlets.end();) {
+		if (it->faces.empty())
+			it = mymeshlets.erase(it);
+		else
+			it++;
 	}
 
 	return true;
@@ -796,7 +845,7 @@ void NewCluster::TryShapeHeal(const MyMesh& mesh)
 			if (detecters[mid].topotype == Torus)
 				TorusHeal(mesh, mid);
 			else if (detecters[mid].topotype == SharpConnect)
-				SharpConnectHeal(mesh, mid);
+				NewSharpConnectHeal(mesh, mid);
 			else
 				std::cout << "what happened?" << std::endl;
 		}
@@ -816,6 +865,10 @@ void NewCluster::TryShapeHeal(const MyMesh& mesh)
 //如果好的返回true
 bool NewCluster::ShapeErrorDetect(const MyMesh& mesh, uint mid)
 {
+	if (mid == 1638)
+		std::cout << "debug" << std::endl;
+
+
 	auto& detecter = detecters[mid];
 	if (detecter.topotype != Unchecked)
 		return detecter.topotype == Correct;
@@ -858,6 +911,8 @@ bool NewCluster::ShapeErrorDetect(const MyMesh& mesh, uint mid)
 				if (edgeset.find(cvoit->idx()) != edgeset.end()) {
 					edgeset.erase(cvoit->idx());
 					vertexcnt[nextidx] += 1;
+					if(nextidx == 1421)
+						std::cout << "debug" << std::endl;
 					nextidx = cvoit->to().idx();
 					oneloop.push_back(cvoit->idx());
 					vertexcnt[nextidx] += 1;
@@ -880,18 +935,14 @@ bool NewCluster::ShapeErrorDetect(const MyMesh& mesh, uint mid)
 	if (!detecter.specialpnts.empty())
 		detecter.topotype = SharpConnect;
 
-	if (detecter.topotype != Correct)
-		std::cout << "Check type error mid " << mid << std::endl;
+	if (detecter.topotype == SharpConnect)
+		std::cout << "Check type error mid: sharp connect   " << mid << std::endl;
+	if(detecter.topotype == Torus)
+		std::cout << "Check type error mid: torus           " << mid << std::endl;
 
 	if (detecter.topotype == Torus) {
 		GenerateTorusNewFaceStart(mesh, loops, mid);
 	}
-
-
-
-
-
-
 
 	return detecter.topotype==Correct;
 }
@@ -987,6 +1038,74 @@ void NewCluster::SharpConnectHeal(const MyMesh& mesh, uint mid)
 	mymeshlets.push_back(newmeshlet);
 	detecters.push_back(newdetect);
 
+}
+
+void NewCluster::NewSharpConnectHeal(const MyMesh& mesh, uint mid)
+{
+	//对mymeshlets[mid]进行重构，重新划分face,更新vertex
+	auto& meshlet = mymeshlets[mid];
+	uint startv = detecters[mid].specialpnts[0];
+	auto vh = mesh.vertex_handle(startv);
+
+	std::set<uint> face_corner;
+	auto& faceset = meshlet.faces;
+
+	for (auto cvfit = mesh.cvf_iter(vh); cvfit.is_valid(); ++cvfit)
+		if (faceset.find(cvfit->idx()) != faceset.end()) {
+			face_corner.insert(cvfit->idx());
+		}
+
+	std::unordered_set<uint> newfaceset;
+	uint startf = *face_corner.begin();
+	newfaceset.insert(startf);
+	face_corner.erase(startf);
+
+	std::deque<uint> que;
+	que.push_back(startf);
+
+	while (!que.empty())
+	{
+		uint faceid = que.front();
+		que.pop_front();
+		auto fh = mesh.face_handle(faceid);
+		for (auto ffit = mesh.cff_iter(fh); ffit.is_valid(); ++ffit) {
+			if (face_corner.find(ffit->idx()) != face_corner.end()) {
+				newfaceset.insert(ffit->idx());
+				face_corner.erase(ffit->idx());
+				que.push_back(ffit->idx());
+			}
+		}
+	}
+	
+	for (auto face : newfaceset)
+		meshlet.faces.erase(face);
+
+	//更新老的
+	meshlet.vertices.clear();
+	for (auto& face : meshlet.faces) {
+		auto fh = mesh.face_handle(face);
+		for (auto fvit = mesh.cfv_iter(fh); fvit.is_valid(); ++fvit)
+			meshlet.vertices.insert(fvit->idx());
+	}
+	detecters[mid].topotype = Unchecked;
+	detecters[mid].halfedgeset.clear();
+	detecters[mid].specialpnts.clear();
+	detecters[mid].newfacestart.clear();
+
+	//更新新的
+	Meshlet_built newmeshlet;
+	newmeshlet.faces = newfaceset;
+
+	for (auto& face : newmeshlet.faces) {
+		auto fh = mesh.face_handle(face);
+		for (auto fvit = mesh.cfv_iter(fh); fvit.is_valid(); ++fvit)
+			newmeshlet.vertices.insert(fvit->idx());
+	}
+	ShapeHeal newdetect;
+	newdetect.topotype = Unchecked;
+
+	mymeshlets.push_back(newmeshlet);
+	detecters.push_back(newdetect);
 }
 
 void NewCluster::GrowFaceSet(const MyMesh& mesh, std::unordered_set<uint>& newfaceset, std::unordered_set<uint>& faceset, uint seedface, uint cutlimit)

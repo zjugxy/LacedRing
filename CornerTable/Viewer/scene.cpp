@@ -243,11 +243,86 @@ namespace glfwviewer {
         glGenVertexArrays(1, &normalobj.VAO);
         glGenBuffers(1, &normalobj.VBO);
 
+        glBindVertexArray(normalobj.VAO);
         glBindBuffer(GL_ARRAY_BUFFER, normalobj.VBO);
         glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * normalobj.linepoints.size(), normalobj.linepoints.data(), GL_STATIC_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
+
+    }
+
+    void Scene::LoadPoints(const MyMesh& mesh)
+    {
+        auto vh = mesh.vertex_handle(6569);
+        auto pnt = mesh.point(vh);
+        pointobj.points.emplace_back(pnt[0], pnt[1],pnt[2]);
+
+
+        glGenVertexArrays(1, &pointobj.VAO);
+        glGenBuffers(1, &pointobj.VBO);
+
+        glBindVertexArray(pointobj.VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, pointobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * pointobj.points.size(), pointobj.points.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+    }
+
+    void Scene::LoadLines(const MyMesh& mesh,Meshlets meshlets)
+    {
+
+
+        std::vector<int> meshlet = meshlets[1638];
+        std::set<int> faceset;
+        for (auto face : meshlet)
+            faceset.insert(face);
+
+        //for (auto face : meshlet) {
+        //    auto fh = mesh.face_handle(face);
+        //    uint cnt = 0;
+        //    for (auto fhit = mesh.cfh_iter(fh); fhit.is_valid(); ++fhit) {
+        //
+        //        uint oppfaceid = fhit->opp().face().idx();
+        //        if (faceset.find(oppfaceid) == faceset.end()) {
+        //            cnt++;
+        //            auto v0 = fhit->to().idx();
+        //            auto v1 = fhit->from().idx();
+        //            auto pnt = mesh.point(mesh.vertex_handle(v0));
+        //            normalobj.linepoints.emplace_back(pnt[0], pnt[1], pnt[2]);
+        //            pnt = mesh.point(mesh.vertex_handle(v1));
+        //            normalobj.linepoints.emplace_back(pnt[0], pnt[1], pnt[2]);
+        //        }
+        //    }
+        //    if (cnt == 3)
+        //        std::cout << "error in cluster" << std::endl;
+        //}
+
+        for (auto face : meshlet) {
+            auto fh = mesh.face_handle(face);
+            uint cnt = 0;
+            for (auto fhit = mesh.cfh_iter(fh); fhit.is_valid(); ++fhit) {
+        
+                    auto v0 = fhit->to().idx();
+                    auto v1 = fhit->from().idx();
+                    auto pnt = mesh.point(mesh.vertex_handle(v0));
+                    normalobj.linepoints.emplace_back(pnt[0], pnt[1], pnt[2]);
+                    pnt = mesh.point(mesh.vertex_handle(v1));
+                    normalobj.linepoints.emplace_back(pnt[0], pnt[1], pnt[2]);
+        
+            }
+        
+        }
+
+        glGenVertexArrays(1, &normalobj.VAO);
+        glGenBuffers(1, &normalobj.VBO);
+
+        
+        glBindVertexArray(normalobj.VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, normalobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * normalobj.linepoints.size(), normalobj.linepoints.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
 
     }
 
@@ -562,12 +637,16 @@ namespace glfwviewer {
     void Scene::renderNormalLine()
     {
         glBindVertexArray(normalobj.VAO);
-        glLineWidth(10.0f);
-        glBindBuffer(GL_ARRAY_BUFFER, normalobj.VBO);
-        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * normalobj.linepoints.size(), normalobj.linepoints.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
+        glLineWidth(5.0f);
+
         glDrawArrays(GL_LINES, 0, normalobj.linepoints.size());
+    }
+
+    void Scene::renderPoints()
+    {
+        glBindVertexArray(pointobj.VAO);
+        glPointSize(20.0f);
+        glDrawArrays(GL_POINTS, 0, pointobj.points.size());
     }
 
     void Scene::renderTSML()

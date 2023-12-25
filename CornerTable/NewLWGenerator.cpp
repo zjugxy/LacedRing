@@ -514,11 +514,11 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 		records[mid].color[1] = static_cast<uchar>(dis(gen) * 255);
 		records[mid].color[2] = static_cast<uchar>(dis(gen) * 255);
 
-		records[mid].useless1 = 0;
-		records[mid].useless2 = 0;
+		records[mid].numinver = vertexnum;
+		//records[mid].useless2 = 0;
+
 
 		uint location = intergeo.size();
-		location = location | (vertexnum << 26);
 		records[mid].ingeolocation = location;
 		records[mid].inconlocation = intercon.size()/4;
 		
@@ -549,7 +549,7 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 		}
 	}
 
-	assert(intergeo.size() < (0xFFFFFFFF >> 6));
+	assert(intergeo.size() < (0xFFFFFFFF));
 	assert(intercon.size() < 0xFFFFFFFF);
 
 	//pack globol ewire
@@ -581,7 +581,7 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 		assert(wire.right.size() == wire.vertex.size());
 	}
 
-	assert(extergeo.size() < (0xFFFFFFFF >> 6));
+	assert(extergeo.size() < (0xFFFFFFFF));
 	assert(extercon.size() < 0xFFFFFFFF);
 
 	for (uint mid = 0; mid < targets.size(); ++mid) {
@@ -589,12 +589,11 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 		for (auto& id : targets[mid].ewireidx) {
 
 			uint location = Egeoloc[id];
-			uint num = gloEwires[id].vertex.size();
-			assert(num < 32);
-			location = location | (num << 26);
-			if (targets[mid].reverse[cnt] == true)
-				location = location | 0x80000000;
+			uchar num = static_cast<uchar>(gloEwires[id].vertex.size());
 
+			if (targets[mid].reverse[cnt] == true)
+				num = num | 0x80;
+			records[mid].numexver.push_back(num);
 			records[mid].exgeolocation.push_back(location);
 			records[mid].exconlocation.push_back(Econloc[id]);
 			cnt++;
@@ -603,11 +602,21 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 
 	for (uint mid = 0; mid < targets.size(); ++mid) {
 		DesLoc.push_back(Desinfo.size());
+
+		while ((records[mid].numexver.size() % 4) != 0)
+			records[mid].numexver.push_back(0);
+		records[mid].ingeostart = static_cast<uchar>(2 + records[mid].numexver.size() / 4);
+
 		Desinfo.push_back(PackChar4Uint(records[mid].ewirenum, records[mid].color[0],
 			records[mid].color[1], records[mid].color[2]));
 
 		Desinfo.push_back(PackChar4Uint(records[mid].irrnum, records[mid].numvertex,
-			records[mid].useless1, records[mid].useless2));
+			records[mid].numinver, records[mid].ingeostart));
+
+		for (int i = 0; i < records[mid].numexver.size(); i += 4) {
+			Desinfo.push_back(PackChar4Uint(records[mid].numexver[i], records[mid].numexver[i+1],
+				records[mid].numexver[i+2], records[mid].numexver[i+3]));
+		}
 
 		Desinfo.push_back(records[mid].ingeolocation);
 		Desinfo.push_back(records[mid].inconlocation);
