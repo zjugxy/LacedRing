@@ -8,17 +8,22 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"ClusteringALgotithm.h"
 #include"NewCluster.h"
 #include"NewLWGenerator.h"
+#include"MeshFile.h"
 bool meshletexist = false;
 std::string meshletfilename;
-
+    
 #define USINGSC 1
 
 int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/horse.obj";
+    std::string filename = "E:/OpenMesh/Models/horse/horse.obj";
     // generate vertices
+
+    MeshFile fileaddressor;
+    bool fileexist = fileaddressor.ImportFile(filename);
+
     try
     {
         if (!OpenMesh::IO::read_mesh(mesh, filename))
@@ -56,10 +61,24 @@ int main()
         NewLWGenerator nlwgen(nclu);
         nlwgen.FUNC(mesh);
     
+
+
+
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
         myscene.LoadCornerTable(mesh);
+        if (fileexist == false) {
+            nlwgen.ExportFile(filename);
+            std::cout << "file contrust down" << std::endl;
+            std::cout << "reopen program" << std::endl;
+            return 0;
+        }
+        else {
+            myscene.LoadGPULW(fileaddressor);
+            
+        }
+
 
         int flag = 2;
 
@@ -67,6 +86,9 @@ int main()
             myscene.LoadSCMeshlet(mesh, meshlets);
             myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
+            myscene.LoadNormalLine(nclu);
+
+
             myview.set(&myscene);
             myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
             myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
@@ -76,6 +98,7 @@ int main()
                 myview.processinput();
                 myview.RenderSCML();
                 myview.RenderWireLine();
+                //myview.RenderNormalLine();
                 //myview.RenderInterWire();
                 glfwSwapBuffers(myview.MYwindow());
                 glfwPollEvents();
@@ -105,7 +128,8 @@ int main()
             exit(EXIT_SUCCESS);
         }
         else {
-            myscene.LoadGPULW(nlwgen);
+            if(fileexist == false)
+                myscene.LoadGPULW(nlwgen);
             //myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
             myview.set(&myscene);

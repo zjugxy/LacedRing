@@ -1,5 +1,5 @@
 #include "NewCluster.h"
-
+#include <Eigen/Dense>
 bool CompareScores(const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b);
 
 NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh)
@@ -15,7 +15,8 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh)
 	std::unordered_set<uint> candidateCheck;
 	std::vector<bool> checklist(nfaces,false);
 	
-
+	maxf = maxtris;
+	maxv = maxverts;
 	//points
 	//normals
 	std::vector<vec3> positions;
@@ -166,7 +167,7 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh)
 	// cut sharp triangles
 	
 	//识别环条状meshlet以及近似还条状的meshlet,记录并分割
-
+	while (SharpTriCut(mesh)) {};
 
 	TryShapeHeal(mesh);
 
@@ -646,6 +647,136 @@ void NewCluster::ReorderAndCheck(EwireBuildSet& buildset)
 	buildset.ewires = orderedwires;
 }
 
+bool NewCluster::SharpTriCut(const MyMesh& mesh)
+{
+	// mymeshlets的face和vertices都已经初始化好了
+
+	std::vector<uint> face2meshlet;
+	face2meshlet.resize(mesh.n_faces());
+
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		const auto& meshlet = mymeshlets[mid];
+		for (const auto& face : meshlet.faces)
+			face2meshlet[face] = mid;
+	}
+
+	struct FaceCandidate
+	{
+		uint faceid;
+		float cost = 0;
+	};
+
+	std::vector<FaceCandidate> candidates;
+	//初始化每一个triangle 对应的meshlet id
+
+	std::vector<Eigen::Vector3d> centroids;
+	std::vector<Eigen::Vector3d> normals;
+
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		// 计算单个meshlet的拟合平面
+		Eigen::MatrixXd faceVertices(3,mymeshlets[mid].faces.size()*3);
+		Eigen::Vector3d centroid;
+		Eigen::Vector3d normal;
+
+		uint vertexIdx = 0;
+
+		for (auto& face : mymeshlets[mid].faces) {
+			for (auto fvit = mesh.cfv_iter(mesh.face_handle(face)); fvit.is_valid(); ++fvit) {
+				auto pnt = mesh.point(*fvit);
+				faceVertices.col(vertexIdx) << pnt[0], pnt[1], pnt[2];
+				++vertexIdx;
+			}
+		}
+		fitPlane(faceVertices, centroid, normal);
+		// 输出拟合平面的法向量
+
+
+		centroids.push_back(centroid);
+		normals.push_back(normal);
+
+		lines.emplace_back(centroid[0], centroid[1], centroid[2]);
+		lines.emplace_back(centroid[0] + normal[0]*5, centroid[1] + normal[1] * 5, centroid[2] + normal[2] * 5);
+	}
+
+	// for_each meshlet : calculate the potential triangle, store
+	// for_each meshlet : for each potential triangle ,calculate the cost
+	// reorder
+
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		for (auto& face : mymeshlets[mid].faces) {
+			std::vector<uint> meshletsids;
+			for (auto ffit = mesh.cff_iter(mesh.face_handle(face)); ffit.is_valid(); ++ffit)
+				if(face2meshlet[ffit->idx()]!=mid)
+					meshletsids.push_back(face2meshlet[ffit->idx()]);
+			
+			if ((meshletsids.size() == 2) && (meshletsids[0] == meshletsids[1])) {
+				FaceCandidate temp;
+				temp.faceid = face;
+				temp.cost = EvaluateCost(centroids[mid],normals[mid],face2meshlet,face,mesh);
+				candidates.push_back(temp);
+			}	
+		}
+	}
+
+	if (candidates.empty())
+		return false;
+
+	std::sort(candidates.begin(), candidates.end(), [](const FaceCandidate& a, const FaceCandidate& b) -> bool
+	{
+		return a.cost > b.cost;
+	});
+
+	for (auto& elem : candidates) {
+		auto face = elem.faceid;
+		uint mid = face2meshlet[face];
+		std::vector<uint> meshletsids;
+		for (auto ffit = mesh.cff_iter(mesh.face_handle(face)); ffit.is_valid(); ++ffit)
+			if (face2meshlet[ffit->idx()] != mid)
+				meshletsids.push_back(face2meshlet[ffit->idx()]);
+
+		if ((meshletsids.size() == 2) && (meshletsids[0] == meshletsids[1])&& (mymeshlets[meshletsids[0]].faces.size()<maxf)) {
+			face2meshlet[face] = meshletsids[0];
+			mymeshlets[mid].faces.erase(face);
+			mymeshlets[meshletsids[0]].faces.insert(face);
+		}
+		else
+			continue;
+
+		if (mymeshlets[mid].faces.empty())
+			mymeshlets[mid].vertices.clear();
+
+		for (auto fhit = mesh.cfh_iter(mesh.face_handle(face)); fhit.is_valid(); ++fhit) {
+			if (face2meshlet[fhit->opp().face().idx()] == mid)
+				mymeshlets[mid].vertices.erase(fhit->next().to().idx());
+		}
+	}
+
+	return true;
+	
+}
+
+void NewCluster::fitPlane(const Eigen::MatrixXd& points, Eigen::Vector3d& centroid, Eigen::Vector3d& normal)
+{
+	int numpoints = points.cols();
+
+	// 计算中心点
+	centroid = points.rowwise().mean();
+
+	// 计算协方差矩阵
+	Eigen::MatrixXd centered = points.colwise() - centroid;
+	Eigen::Matrix3d covariance = (centered * centered.transpose()) / static_cast<double>(numpoints);
+
+	// 计算特征值和特征向量
+	Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> solver(covariance);
+	Eigen::Vector3d eigenvalues = solver.eigenvalues();
+	Eigen::Matrix3d eigenvectors = solver.eigenvectors();
+
+	// 选择最小特征值对应的特征向量作为法线向量
+	int minIndex;
+	eigenvalues.minCoeff(&minIndex);
+	normal = eigenvectors.col(minIndex).normalized();
+}
+
 void NewCluster::TryShapeHeal(const MyMesh& mesh)
 {
 	std::vector<uint> errormeshlets;
@@ -987,4 +1118,37 @@ std::vector<uint> NewCluster::BFS(const MyMesh& mesh, uint startidx, const std::
 	assert(res.back() == startidx);
 	return res;
 
+}
+
+double NewCluster::point2PlaneDist(const Eigen::Vector3d& point, const Eigen::Vector3d& centroid, const Eigen::Vector3d& normal)
+{
+	Eigen::Vector3d diff = point - centroid;
+	double dist = std::abs(diff.dot(normal));
+	return dist;
+}
+
+double NewCluster::EvaluateCost(const Eigen::Vector3d& centroid, const Eigen::Vector3d& normal, const std::vector<uint>& meshletid, uint faceid, const MyMesh& mesh)
+{
+	double cost = 0;
+	auto fh = mesh.face_handle(faceid);
+	for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); ++cfvit) {
+		auto pnt = mesh.point(*cfvit);
+		cost += point2PlaneDist(Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }, centroid, normal);
+	}
+
+	for (auto cfheit = mesh.cfh_iter(fh); cfheit.is_valid(); ++cfheit) {
+		auto oppfaceid = cfheit->opp().face().idx();
+		auto pnt0 = mesh.point(cfheit->from());
+		auto pnt1 = mesh.point(cfheit->to());
+		vec3 p0{ pnt0[0],pnt0[1],pnt0[2] };
+		vec3 p1{ pnt1[0],pnt1[1],pnt1[2] };
+		double dis = glm::distance(p0, p1);
+
+		if (meshletid[oppfaceid] != meshletid[faceid])
+			cost += dis;
+		else
+			cost -= dis;
+	}
+	//cost越高 该faceid的毛刺程度，偏离程度越大
+	return cost;
 }

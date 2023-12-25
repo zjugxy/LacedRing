@@ -2,7 +2,7 @@
 #define EMPTYWIRE 0xFFFFFFFF
 #define WIREEND 0xFF
 #define REVERSEFLAG 0x80000000
-
+#include<fstream>
 #include<random>
 
 NewLWGenerator::NewLWGenerator(const NewCluster& nclu)
@@ -652,4 +652,113 @@ uint NewLWGenerator::PackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3) {
 		(static_cast<uint32_t>(c2) << 8) |
 		static_cast<uint32_t>(c3);
 	return reinterpret_cast<uint&>(packedValue);
-}	
+}
+void NewLWGenerator::ExportFile(const std::string& filename)
+{
+	size_t lastDotpos = filename.find_last_of('.');
+	std::string partfilename = filename.substr(0, lastDotpos + 1);
+	std::string DesLocfilename = partfilename + std::string{ "DesLoc" };
+	std::string Desinfofilename = partfilename + std::string{ "Desinfo" };
+	std::string newinterconfilename = partfilename + std::string{ "newintercon" };
+	std::string newexterconfilename = partfilename + std::string{ "newextercon" };
+	std::string intergeofilename = partfilename + std::string{ "intergeo" };
+	std::string extergeofilename = partfilename + std::string{ "extergeo" };
+
+	{
+		std::ofstream file;
+		file.open(DesLocfilename, std::ios::binary);
+		if (!file.is_open()) {
+			std::cerr << "无法打开文件：" << DesLocfilename << std::endl;
+			return;
+		}
+
+		// 写入向量大小
+		size_t size = DesLoc.size();
+		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+		// 写入向量数据
+		file.write(reinterpret_cast<const char*>(DesLoc.data()), size * sizeof(uint));
+
+		file.close();
+	}
+
+	{
+		std::ofstream file;
+		file.open(Desinfofilename, std::ios::binary);
+		if (!file.is_open()) {
+			std::cerr << "无法打开文件：" << Desinfofilename << std::endl;
+			return;
+		}
+
+		// 写入向量大小
+		size_t size = Desinfo.size();
+		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+		// 写入向量数据
+		file.write(reinterpret_cast<const char*>(Desinfo.data()), size * sizeof(uint));
+
+		file.close();
+	}
+	{
+		std::ofstream file;
+		file.open(newinterconfilename, std::ios::binary);
+		if (!file.is_open()) {
+			std::cerr << "无法打开文件：" << newinterconfilename << std::endl;
+			return;
+		}
+
+		// 写入向量大小
+		size_t size = newintercon.size();
+		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+		// 写入向量数据
+		file.write(reinterpret_cast<const char*>(newintercon.data()), size * sizeof(uint));
+
+		file.close();
+	}
+	{
+		std::ofstream file;
+		file.open(newexterconfilename, std::ios::binary);
+		if (!file.is_open()) {
+			std::cerr << "无法打开文件：" << newexterconfilename << std::endl;
+			return;
+		}
+
+		// 写入向量大小
+		size_t size = newextercon.size();
+		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+		// 写入向量数据
+		file.write(reinterpret_cast<const char*>(newextercon.data()), size * sizeof(uint));
+
+		file.close();
+	}
+	{
+		std::ofstream file;
+		file.open(intergeofilename, std::ios::binary);
+		if (!file.is_open()) {
+			std::cerr << "无法打开文件：" << intergeofilename << std::endl;
+			return;
+		}
+
+		// 写入向量大小
+		size_t size = intergeo.size();
+		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+		// 写入向量数据
+		file.write(reinterpret_cast<const char*>(intergeo.data()), size * sizeof(float));
+
+		file.close();
+	}
+	{
+		std::ofstream file;
+		file.open(extergeofilename, std::ios::binary);
+		if (!file.is_open()) {
+			std::cerr << "无法打开文件：" << extergeofilename << std::endl;
+			return;
+		}
+
+		// 写入向量大小
+		size_t size = extergeo.size();
+		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
+		// 写入向量数据
+		file.write(reinterpret_cast<const char*>(extergeo.data()), size * sizeof(float));
+
+		file.close();
+	}
+}

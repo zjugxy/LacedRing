@@ -49,6 +49,8 @@ namespace glfwviewer {
 		virtual void RenderSWML();
 		virtual void RenderFINALLWML();
 
+		virtual void RenderNormalLine();
+
 		virtual void RenderWireLine();
 		virtual void RenderWirePnt();
 		virtual void RenderInterWire();

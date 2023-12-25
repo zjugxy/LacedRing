@@ -3,6 +3,7 @@
 #include<unordered_map>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include<queue>
+#include<Eigen/Dense>
 #include"Meshlet.h"
 typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 
@@ -59,10 +60,17 @@ public:
 	size_t nfaces;
 	size_t nvertices;
 
+	size_t maxf;
+	size_t maxv;
+
 	std::vector<std::vector<uint>> gloewires;
 	std::vector<uint> lateaddress_surred;
 	std::vector<uint> lateaddress_inc;
 	std::vector<EwireBuildSet> buildsets;
+
+	//
+	std::vector<vec3> lines;
+
 
 public:
 	NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh);
@@ -88,6 +96,10 @@ private:
 	void BuildGloEwires(std::vector<EwireBuildSet>& buildsets);
 	void ReorderAndCheck(EwireBuildSet& buildset);
 
+	bool SharpTriCut(const MyMesh& mesh);
+	void fitPlane(const Eigen::MatrixXd& points, Eigen::Vector3d& centroid, Eigen::Vector3d& normal);
+
+
 	void TryShapeHeal(const MyMesh& mesh);
 	bool ShapeErrorDetect(const MyMesh& mesh, uint mid);
 
@@ -103,5 +115,7 @@ private:
 	std::vector<uint> BFS(const MyMesh& mesh, uint startidx,const std::unordered_set<uint>& targets,
 		const std::unordered_set<uint>& faceset);
 
+	double point2PlaneDist(const Eigen::Vector3d& point, const Eigen::Vector3d& centroid, const Eigen::Vector3d& normal);
+	double EvaluateCost(const Eigen::Vector3d& centroid, const Eigen::Vector3d& normal, const std::vector<uint>& meshletid, uint faceid, const MyMesh& mesh);
 };
 

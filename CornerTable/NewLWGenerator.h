@@ -75,6 +75,7 @@ public:
 	NewLWGenerator(const NewCluster& nclu);
 
 	void FUNC(const MyMesh& mesh);
+	void ExportFile(const std::string& filename);
 
 private:
 	void InternalWireGenerator(const MyMesh& mesh);
@@ -93,5 +94,6 @@ private:
 	std::array<uchar, 4> DiscomposeUint(uint value);
 	float PackChar4Float(uchar c0, uchar c1, uchar c2, uchar c3);
 	uint PackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3);
+
 };
 

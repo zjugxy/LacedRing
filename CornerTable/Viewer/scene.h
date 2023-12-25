@@ -11,6 +11,8 @@
 #include"../NewCluster.h"
 #include"../LaceWireGenerator.h"
 #include"../NewLWGenerator.h"
+#include"../MeshFile.h"
+
 
 namespace glfwviewer {
 
@@ -160,6 +162,12 @@ namespace glfwviewer {
 		GLuint LWdesloc, LWdesinfo, LWintercon, LWextercon, LWintergeo, LWextergeo;
 	};
 
+	struct SceneRenderNormal {
+		std::vector<vec3> linepoints;
+		GLuint VAO;
+		GLuint VBO;
+	};
+
 
 	class Scene
 	{
@@ -184,6 +192,7 @@ namespace glfwviewer {
 		SceneRenderInterWire interobj;
 		SceneRenderSimpleWire swobj;
 		SceneGPULW gpulwobj;
+		SceneRenderNormal normalobj;
 
 	public:
 		Scene();
@@ -201,7 +210,7 @@ namespace glfwviewer {
 		void LoadLacePoint(const MyMesh& mesh, const MyCluster& clu);
 		void LoadInternalWire(const MyMesh& mesh ,const LaceWireGenerator& lwn);
 		void LoadInternalWire(const MyMesh& mesh, const NewLWGenerator& nlwn);
-
+		void LoadNormalLine(const NewCluster& nclu);
 		
 		void renderML();
 		void renderCT();
@@ -211,6 +220,7 @@ namespace glfwviewer {
 		void renderWireLine();
 		void renderInterWire();
 		void renderWirePnt();
+		void renderNormalLine();
 		//void renderobjs();
 
 
@@ -221,6 +231,8 @@ namespace glfwviewer {
 		void LoadSimpleWireMeshlet(const LaceWireGenerator& lwn);
 		void LoadSimpleWireMeshlet(const NewLWGenerator& nlwn);
 		void LoadGPULW(NewLWGenerator& nlwn);
+		void LoadGPULW(MeshFile& meshfile);
+
 
 		void renderTSML();
 		void renderIXML();

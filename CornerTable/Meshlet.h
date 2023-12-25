@@ -37,7 +37,6 @@ struct SC_meshlet {
 	uint primcnt;
 	uint primbegin;
 	vec4 color;
-
 };
 
 using Simple_meshlet = SC_meshlet;

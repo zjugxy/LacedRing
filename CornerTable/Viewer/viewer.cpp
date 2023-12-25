@@ -337,6 +337,20 @@ namespace glfwviewer {
 		 m_scene->renderGPULW();
 	 }
 
+	 void Viewer::RenderNormalLine()
+	 {
+		 m_line_shader.use();
+
+
+		 glm::mat4 model = glm::mat4(1.0f);
+		 m_line_shader.setMat4("projection", m_camera.projMatrix());
+		 m_line_shader.setMat4("view", m_camera.viewMatrix());
+		 m_line_shader.setMat4("model", model);
+
+
+		 m_scene->renderNormalLine();
+	 }
+
 	 void Viewer::RenderWireLine()
 	 {
 

@@ -235,6 +235,22 @@ namespace glfwviewer {
 
     }
 
+    void Scene::LoadNormalLine(const NewCluster& nclu)
+    {
+        for (const auto& pnt : nclu.lines)
+            normalobj.linepoints.push_back(pnt);
+
+        glGenVertexArrays(1, &normalobj.VAO);
+        glGenBuffers(1, &normalobj.VBO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, normalobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * normalobj.linepoints.size(), normalobj.linepoints.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+
+    }
+
     void Scene::LoadTSMeshlet(MyMesh mesh, Meshlets meshlets)
     {
         TS_MeshletLoad(tsobj.tsmeshlets, mesh, meshlets, tsobj.tsgeoinfo);
@@ -416,6 +432,52 @@ namespace glfwviewer {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
+    void Scene::LoadGPULW(MeshFile& meshfile)
+    {
+        gpulwobj.Desinfo = &meshfile.Desinfo;
+        gpulwobj.DesLoc = &meshfile.DesLoc;
+        gpulwobj.newintercon = &meshfile.newintercon;
+        gpulwobj.intergeo = &meshfile.intergeo;
+        gpulwobj.newextercon = &meshfile.newextercon;
+        gpulwobj.extergeo = &meshfile.extergeo;
+
+        glGenBuffers(1, &gpulwobj.LWdesloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWdesloc);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.DesLoc->size() * sizeof(uint), gpulwobj.DesLoc->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, gpulwobj.LWdesloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWdesinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWdesinfo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.Desinfo->size() * sizeof(uint), gpulwobj.Desinfo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, gpulwobj.LWdesinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWintercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWintercon);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.newintercon->size() * sizeof(uint), gpulwobj.newintercon->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, gpulwobj.LWintercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWextercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWextercon);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.newextercon->size() * sizeof(uint), gpulwobj.newextercon->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, gpulwobj.LWextercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWintergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWintergeo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.intergeo->size() * sizeof(float), gpulwobj.intergeo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, gpulwobj.LWintergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &gpulwobj.LWextergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, gpulwobj.LWextergeo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, gpulwobj.extergeo->size() * sizeof(float), gpulwobj.extergeo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, gpulwobj.LWextergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
 
     void Scene::renderCT() {
 
@@ -497,6 +559,17 @@ namespace glfwviewer {
         glDrawArrays(GL_POINTS, 0, pntobj.geoinfo.size());
     }
 
+    void Scene::renderNormalLine()
+    {
+        glBindVertexArray(normalobj.VAO);
+        glLineWidth(10.0f);
+        glBindBuffer(GL_ARRAY_BUFFER, normalobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * normalobj.linepoints.size(), normalobj.linepoints.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glDrawArrays(GL_LINES, 0, normalobj.linepoints.size());
+    }
+
     void Scene::renderTSML()
     {
         glDrawMeshTasksNV(0, tsobj.tsmeshlets.size());
@@ -521,7 +594,25 @@ namespace glfwviewer {
 
     void Scene::renderGPULW()
     {
+        GLuint query;
+        glGenQueries(1, &query);
+
+        // 提交命令之前插入时间戳查询开始
+        glBeginQuery(GL_TIME_ELAPSED, query);
+
         glDrawMeshTasksNV(0, gpulwobj.DesLoc->size());
+
+        glEndQuery(GL_TIME_ELAPSED);
+
+        // 等待查询结果
+        GLuint64 elapsedTime;
+        glGetQueryObjectui64v(query, GL_QUERY_RESULT, &elapsedTime);
+
+        // 删除查询对象
+        glDeleteQueries(1, &query);
+
+        // 输出执行时间
+        std::cout << "glDrawArrays execution time: " << elapsedTime / 1000000.0 << " milliseconds" << std::endl;
     }
 
 

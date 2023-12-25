@@ -1,12 +1,10 @@
 #version 450 core
 #extension GL_NV_mesh_shader : require
-
 #define GROUP_SIZE 32
 
 layout(local_size_x=GROUP_SIZE) in;
 layout(max_vertices=64, max_primitives=126) out;
 layout(triangles) out;
-
 
 layout(std430,binding = 1) readonly buffer geoinfo{
 	vec4 position[];
@@ -47,7 +45,6 @@ void main(){
 
 	//每个线程处理顶点
 
-	if(mi==1){
 
 		uint add = threadid;
 		while(add<meshlet.vertex_cnt){
@@ -73,5 +70,5 @@ void main(){
 		if(threadid==0)
 			gl_PrimitiveCountNV = meshlet.primcnt;
 	
-	}
+	
 }

@@ -147,6 +147,7 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="LaceWireGenerator.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MeshFile.cpp" />
     <ClCompile Include="meshletloader.cpp" />
     <ClCompile Include="MyCluster.cpp" />
     <ClCompile Include="MyLR.cpp" />
@@ -159,6 +160,7 @@
   <ItemGroup>
     <ClInclude Include="CornerTable.h" />
     <ClInclude Include="LaceWireGenerator.h" />
+    <ClInclude Include="MeshFile.h" />
     <ClInclude Include="Meshlet.h" />
     <ClInclude Include="MShader.h" />
     <ClInclude Include="MyCluster.h" />
