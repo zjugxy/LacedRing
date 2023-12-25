@@ -9,145 +9,79 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"NewCluster.h"
 #include"NewLWGenerator.h"
 #include"MeshFile.h"
-bool meshletexist = false;
-std::string meshletfilename;
-    
+
 #define USINGSC 1
 
 int main()
 {
     MyMesh mesh;
-    Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/Models/horse/horse.obj";
+
+    std::string filename = "E:/OpenMesh/Models/armadillo/armadillo.obj";
     // generate vertices
 
     MeshFile fileaddressor;
     bool fileexist = fileaddressor.ImportFile(filename);
 
-    try
-    {
-        if (!OpenMesh::IO::read_mesh(mesh, filename))
+    if (fileexist == false) {
+        try
         {
-            std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
+            if (!OpenMesh::IO::read_mesh(mesh, filename))
+            {
+                std::cerr << "Cannot write mesh to file 'output.off'" << std::endl;
+                return 1;
+            }
+        }
+        catch (std::exception& x)
+        {
+            std::cerr << x.what() << std::endl;
             return 1;
         }
-    }
-    catch (std::exception& x)
-    {
-        std::cerr << x.what() << std::endl;
-        return 1;
-    }
 
-    meshletfilename = changeFileExtension(filename, "meshlet");
-
-    //meshlets = readVectorFromFile(meshletfilename);
-    //if (!meshlets.empty()) {
-    //    meshletexist = true;
-    //}
-
-    std::cout <<"face num:" << mesh.n_faces() << std::endl<<"vert num:" << mesh.n_vertices() << std::endl <<"halfedge :" << mesh.n_halfedges() << std::endl;
-    
-
-        //MyCluster clu(mesh, 64, 126, 0.5);
-        //meshlets = clu.oldmeshlets;
-
-        NewCluster nclu(64, 126,mesh);
-        meshlets = nclu.oldmeshlets;
+        std::cout << "face num:" << mesh.n_faces() << std::endl << "vert num:" << mesh.n_vertices() << std::endl << "halfedge :" << mesh.n_halfedges() << std::endl;
 
 
-        //LaceWireGenerator lwgen;
-        //clu.PackintoLaceWire(lwgen.Ewires, lwgen.meshlets, lwgen.Dual2idx);
-        //lwgen.InternalWireGeneraotr(mesh);
+        NewCluster nclu(64, 126, mesh);
+
         NewLWGenerator nlwgen(nclu);
         nlwgen.FUNC(mesh);
-    
+        nlwgen.ExportFile(filename);
+
+        glfwviewer::Scene myscene;
+        myscene.LoadMesh(mesh,filename);
+        
+
+
+        std::cout << "file contrust down" << std::endl;
+        std::cout << "reopen program" << std::endl;
+        return 0;
+    }
 
 
 
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
-        myscene.LoadCornerTable(mesh);
-        if (fileexist == false) {
-            nlwgen.ExportFile(filename);
-            std::cout << "file contrust down" << std::endl;
-            std::cout << "reopen program" << std::endl;
-            return 0;
+        //myscene.LoadCornerTable(mesh);
+
+        //myscene.LoadGPULW(nlwgen);
+        //myscene.LoadInternalWire(mesh, nlwgen);
+        //myscene.LoadLaceWire(mesh, nclu);
+        myscene.LoadGPULW(fileaddressor);
+        myview.set(&myscene);
+        myview.setMeshshader("Lacemeshshader.glsl", "TSfragshader.glsl");
+        myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
+        
+        while (!glfwWindowShouldClose(myview.MYwindow()))
+        {
+            myview.processinput();
+            myview.RenderFINALLWML();
+            //myview.RenderWireLine();
+            //myview.RenderInterWire();
+            glfwSwapBuffers(myview.MYwindow());
+            glfwPollEvents();
         }
-        else {
-            myscene.LoadGPULW(fileaddressor);
-            
-        }
-
-
-        int flag = 2;
-
-        if (flag == 0) {
-            myscene.LoadSCMeshlet(mesh, meshlets);
-            myscene.LoadInternalWire(mesh, nlwgen);
-            myscene.LoadLaceWire(mesh, nclu);
-            myscene.LoadNormalLine(nclu);
-
-
-            myview.set(&myscene);
-            myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
-            myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
-
-            while (!glfwWindowShouldClose(myview.MYwindow()))
-            {
-                myview.processinput();
-                myview.RenderSCML();
-                myview.RenderWireLine();
-                //myview.RenderNormalLine();
-                //myview.RenderInterWire();
-                glfwSwapBuffers(myview.MYwindow());
-                glfwPollEvents();
-            }
-            glfwTerminate();
-            exit(EXIT_SUCCESS);
-        }
-        else if(flag ==1){
-
-            myscene.LoadSimpleWireMeshlet(nlwgen);
-            //myscene.LoadInternalWire(mesh, nlwgen);
-            myscene.LoadLaceWire(mesh, nclu);
-            myview.set(&myscene);
-            myview.setMeshshader("PointSimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
-            myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
-
-            while (!glfwWindowShouldClose(myview.MYwindow()))
-            {
-                myview.processinput();
-                myview.RenderSWML();
-                myview.RenderWireLine();
-                //myview.RenderInterWire();
-                glfwSwapBuffers(myview.MYwindow());
-                glfwPollEvents();
-            }
-            glfwTerminate();
-            exit(EXIT_SUCCESS);
-        }
-        else {
-            if(fileexist == false)
-                myscene.LoadGPULW(nlwgen);
-            //myscene.LoadInternalWire(mesh, nlwgen);
-            myscene.LoadLaceWire(mesh, nclu);
-            myview.set(&myscene);
-            myview.setMeshshader("Lacemeshshader.glsl", "TSfragshader.glsl");
-            myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
-
-            while (!glfwWindowShouldClose(myview.MYwindow()))
-            {
-                myview.processinput();
-                myview.RenderFINALLWML();
-                myview.RenderWireLine();
-                //myview.RenderInterWire();
-                glfwSwapBuffers(myview.MYwindow());
-                glfwPollEvents();
-            }
-            glfwTerminate();
-            exit(EXIT_SUCCESS);
-        }
+        glfwTerminate();
+        exit(EXIT_SUCCESS);
 
     
 

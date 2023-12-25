@@ -22,6 +22,49 @@ namespace glfwviewer {
 
 
 
+    void Scene::LoadMesh(const MyMesh& mesh,const std::string& filename)
+    {
+        bool firstv = true;
+        BoundingBox box;
+       
+        for (const auto& ver : mesh.vertices()) {
+            auto pnt = mesh.point(ver);
+            vec3 point{ pnt[0],pnt[1],pnt[2] };
+            if (firstv) {
+                box.mymin(point);
+                box.mymax(point);
+                firstv = false;
+            }
+            box.mymin(glm::min(box.mymin(), point));
+            box.mymax(glm::max(box.mymax(), point));
+        }
+
+        m_bbox = box;
+        vec3 center = (box.mymax() + box.mymin()) * 0.5f;
+        float radius = glm::distance(box.mymax(), box.mymin()) * 0.5f;
+        m_bsphere.center(center);
+        m_bsphere.radius(radius);
+
+        vec3 boxmin = box.mymin();
+        vec3 boxmax = box.mymax();
+        float data[10] = {
+            boxmin[0],boxmin[1],boxmin[2],
+            boxmax[0],boxmax[1],boxmax[2],
+            center[0],center[1],center[2],
+            radius
+        };
+
+
+        size_t lastDotpos = filename.find_last_of('.');
+        std::string partfilename = filename.substr(0, lastDotpos + 1);
+
+        std::string outputfilename = partfilename + std::string{ "Bounding" };
+        std::ofstream file;
+        file.open(outputfilename,std::ios::binary);
+        file.write(reinterpret_cast<const char*>(data), sizeof(data));
+        file.close();
+    }
+
     void Scene::LoadCornerTable(const CornerTable& ct)
     {
         //更新mmbox mmsphere
@@ -434,6 +477,16 @@ namespace glfwviewer {
 
     void Scene::LoadGPULW(MeshFile& meshfile)
     {
+        BoundingBox box;
+        box.mymin(vec3{ meshfile.data[0],meshfile.data[1],meshfile.data[2] });
+        box.mymax(vec3{ meshfile.data[3],meshfile.data[4],meshfile.data[5] });
+        BoundingSphere sphere;
+        sphere.center(vec3{ meshfile.data[6],meshfile.data[7],meshfile.data[8] });
+        sphere.radius(meshfile.data[9]);
+        m_bbox = box;
+        m_bsphere = sphere;
+
+
         gpulwobj.Desinfo = &meshfile.Desinfo;
         gpulwobj.DesLoc = &meshfile.DesLoc;
         gpulwobj.newintercon = &meshfile.newintercon;

@@ -13,7 +13,7 @@ public:
 	std::vector<uint> newextercon;
 	std::vector<float> intergeo;
 	std::vector<float> extergeo;
-
+	float data[10];
 
 public:
 	bool ImportFile(std::string& filename) {
@@ -26,10 +26,8 @@ public:
 		std::string newexterconfilename = partfilename + std::string{ "newextercon" };
 		std::string intergeofilename = partfilename + std::string{ "intergeo" };
 		std::string extergeofilename = partfilename + std::string{ "extergeo" };
+		std::string Boundingfilename = partfilename + std::string{ "Bounding" };
 
-
-		std::cout <<Desinfofilename << std::endl;
-		std::cout << Desinfofilename << std::endl;
 
 		{
 			std::ifstream file;
@@ -143,6 +141,16 @@ public:
 			intergeo.resize(size);
 
 			file.read(reinterpret_cast<char*>(intergeo.data()), size * sizeof(float));
+			file.close();
+		}
+		{
+			std::ifstream file;
+			file.open(Boundingfilename, std::ios::binary);
+			if (!file.is_open()) {
+				std::cerr << "无法打开文件：" << Boundingfilename << std::endl;
+				return false;
+			}
+			file.read(reinterpret_cast<char*>(data), 10 * sizeof(float));
 			file.close();
 		}
 

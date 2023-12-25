@@ -201,6 +201,7 @@ namespace glfwviewer {
 		BoundingSphere* bdSphere() { return &m_bsphere; }
 		BoundingBox* bdBox() { return &m_bbox; }
 
+		void LoadMesh(const MyMesh& mesh,const std::string& filename);
 		void LoadCornerTable(const CornerTable& ct);
 		void LoadLR(const MyLR& lr);
 		void LoadLaceWire(const MyMesh& mesh,const MyCluster& clu);
