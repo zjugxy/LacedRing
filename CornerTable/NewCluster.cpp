@@ -4,190 +4,223 @@
 
 bool CompareScores(const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b);
 
-NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh)
-{
-	auto startTime = std::chrono::steady_clock::now();
+NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh,Meshlets meshlets,const std::string& filename)
+{	
+	std::chrono::steady_clock::time_point startTime, endTime;
+	std::chrono::milliseconds duration;
 
 	nfaces = mesh.n_faces();
 	nvertices = mesh.n_vertices();
 
-	mymeshlets.clear();
-	mymeshlets.emplace_back();
-	Meshlet_built* curr = &mymeshlets.back();
-
-	std::vector<std::pair<uint, float>> candidates;
-	std::unordered_set<uint> candidateCheck;
-	std::vector<bool> checklist(nfaces,false);
-	
 	maxf = maxtris;
 	maxv = maxverts;
-	//points
-	//normals
-	std::vector<vec3> positions;
-	std::vector<vec3> normals;
+
+	if (meshlets.empty()) {
+		startTime = std::chrono::steady_clock::now();
 
 
-	uint triIndex = 0;
-	candidates.push_back(std::make_pair(triIndex, 0.0f));
-	candidateCheck.insert(triIndex);
 
-	while (!candidates.empty())
-	{
-		uint faceindex = candidates.back().first;
-		candidates.pop_back();
+		mymeshlets.clear();
+		mymeshlets.emplace_back();
+		Meshlet_built* curr = &mymeshlets.back();
 
-		auto fh = mesh.face_handle(faceindex);
-		std::array<uint, 3> pnts;
+		std::vector<std::pair<uint, float>> candidates;
+		std::unordered_set<uint> candidateCheck;
+		std::vector<bool> checklist(nfaces, false);
+
+
+		//points
+		//normals
+		std::vector<vec3> positions;
+		std::vector<vec3> normals;
+
+
+		uint triIndex = 0;
+		candidates.push_back(std::make_pair(triIndex, 0.0f));
+		candidateCheck.insert(triIndex);
+
+		while (!candidates.empty())
 		{
-			int temp = 0;
-			MyMesh::ConstFaceVertexCCWIter fv_it = mesh.cfv_ccwiter(fh);
-			for (; fv_it.is_valid(); ++fv_it)
+			uint faceindex = candidates.back().first;
+			candidates.pop_back();
+
+			auto fh = mesh.face_handle(faceindex);
+			std::array<uint, 3> pnts;
 			{
-				MyMesh::VertexHandle vertex = *fv_it;
-				pnts[temp++] = vertex.idx();
-			}
-		}
-
-		assert(pnts[0] < nvertices);
-		assert(pnts[1] < nvertices);
-		assert(pnts[2] < nvertices);
-		//有问题啊
-		if (AddToMeshlet(maxverts, maxtris, curr, pnts,faceindex)) {
-			//faceindex对应三角形被插入meshlet
-			checklist[faceindex] = true;
-
-			//计算 center radius normal
-			for (uint i = 0; i < 3; ++i) {
-				uint vidx = pnts[i];
-				auto vh = mesh.vertex_handle(vidx);
-				auto geom_vertex = mesh.point(vh);
-				positions.emplace_back(geom_vertex[0], geom_vertex[1], geom_vertex[2]);
-			}
-			
-			{
-				const vec3& vertex1 = positions[positions.size() - 3];
-				const vec3& vertex2 = positions[positions.size() - 2];
-				const vec3& vertex3 = positions[positions.size() - 1];
-
-				auto edge1 = vertex2 - vertex1;
-				auto edge2 = vertex3 - vertex2;
-
-				auto normal = glm::normalize(glm::cross(edge1, edge2));
-				normals.push_back(normal);
-			}
-			float radius;
-			vec3 center;
-			CalculateCenterRadius(positions, radius, center);
-
-			float _useless;
-			vec3 normal;
-			CalculateCenterRadius(normals, _useless, normal);
-
-			//遍历face相邻的三个face 并且更新 candidates
-			{
-				MyMesh::ConstFaceFaceCCWIter ff_it = mesh.cff_ccwiter(fh);
-				for (; ff_it.is_valid(); ++ff_it) {
-					auto fidx = ff_it->idx();
-					if (fidx<0 || fidx>nfaces)
-						continue;
-					if (checklist[fidx] == true)
-						continue;
-					if (candidateCheck.count(fidx))
-						continue;
-
-					candidates.push_back(std::make_pair(fidx, FLT_MAX));
-					candidateCheck.insert(fidx);
-				}
-			}
-
-			for (auto& elem : candidates) {
-				uint fidx = elem.first;
-				std::array<vec3, 3> tri;
-				std::array<uint, 3> triidxs;
-				auto nfh = mesh.face_handle(fidx);
-
 				int temp = 0;
-				MyMesh::ConstFaceVertexCCWIter fv_it = mesh.cfv_ccwiter(nfh);
+				MyMesh::ConstFaceVertexCCWIter fv_it = mesh.cfv_ccwiter(fh);
 				for (; fv_it.is_valid(); ++fv_it)
 				{
 					MyMesh::VertexHandle vertex = *fv_it;
-					auto pnt = mesh.point(vertex);
-					tri[temp] = vec3{ pnt[0],pnt[1],pnt[2] };
-					triidxs[temp++] = vertex.idx();
+					pnts[temp++] = vertex.idx();
 				}
-
-				elem.second = ComputeScore(curr, center, radius, normal, tri, triidxs);
 			}
 
-			if (IsMeshletFull(curr, maxverts, maxtris)||candidates.empty()) {
-				positions.clear();
-				normals.clear();
-				candidateCheck.clear();
-				if (!candidates.empty()) {
-					candidates[0] = candidates.back();
-					candidates.resize(1);
-					candidateCheck.insert(candidates[0].first);
+			assert(pnts[0] < nvertices);
+			assert(pnts[1] < nvertices);
+			assert(pnts[2] < nvertices);
+			//有问题啊
+			if (AddToMeshlet(maxverts, maxtris, curr, pnts, faceindex)) {
+				//faceindex对应三角形被插入meshlet
+				checklist[faceindex] = true;
+
+				//计算 center radius normal
+				for (uint i = 0; i < 3; ++i) {
+					uint vidx = pnts[i];
+					auto vh = mesh.vertex_handle(vidx);
+					auto geom_vertex = mesh.point(vh);
+					positions.emplace_back(geom_vertex[0], geom_vertex[1], geom_vertex[2]);
 				}
-				mymeshlets.emplace_back();
-				curr = &mymeshlets.back();
+
+				{
+					const vec3& vertex1 = positions[positions.size() - 3];
+					const vec3& vertex2 = positions[positions.size() - 2];
+					const vec3& vertex3 = positions[positions.size() - 1];
+
+					auto edge1 = vertex2 - vertex1;
+					auto edge2 = vertex3 - vertex2;
+
+					auto normal = glm::normalize(glm::cross(edge1, edge2));
+					normals.push_back(normal);
+				}
+				float radius;
+				vec3 center;
+				CalculateCenterRadius(positions, radius, center);
+
+				float _useless;
+				vec3 normal;
+				CalculateCenterRadius(normals, _useless, normal);
+
+				//遍历face相邻的三个face 并且更新 candidates
+				{
+					MyMesh::ConstFaceFaceCCWIter ff_it = mesh.cff_ccwiter(fh);
+					for (; ff_it.is_valid(); ++ff_it) {
+						auto fidx = ff_it->idx();
+						if (fidx<0 || fidx>nfaces)
+							continue;
+						if (checklist[fidx] == true)
+							continue;
+						if (candidateCheck.count(fidx))
+							continue;
+
+						candidates.push_back(std::make_pair(fidx, FLT_MAX));
+						candidateCheck.insert(fidx);
+					}
+				}
+
+				for (auto& elem : candidates) {
+					uint fidx = elem.first;
+					std::array<vec3, 3> tri;
+					std::array<uint, 3> triidxs;
+					auto nfh = mesh.face_handle(fidx);
+
+					int temp = 0;
+					MyMesh::ConstFaceVertexCCWIter fv_it = mesh.cfv_ccwiter(nfh);
+					for (; fv_it.is_valid(); ++fv_it)
+					{
+						MyMesh::VertexHandle vertex = *fv_it;
+						auto pnt = mesh.point(vertex);
+						tri[temp] = vec3{ pnt[0],pnt[1],pnt[2] };
+						triidxs[temp++] = vertex.idx();
+					}
+
+					elem.second = ComputeScore(curr, center, radius, normal, tri, triidxs);
+				}
+
+				if (IsMeshletFull(curr, maxverts, maxtris) || candidates.empty()) {
+					positions.clear();
+					normals.clear();
+					candidateCheck.clear();
+					if (!candidates.empty()) {
+						candidates[0] = candidates.back();
+						candidates.resize(1);
+						candidateCheck.insert(candidates[0].first);
+					}
+					mymeshlets.emplace_back();
+					curr = &mymeshlets.back();
+				}
+				else
+				{
+					std::sort(candidates.begin(), candidates.end(), CompareScores);
+				}
 			}
-			else
-			{
-				std::sort(candidates.begin(), candidates.end(), CompareScores);
+			else {
+				if (candidates.empty())
+				{
+					positions.clear();
+					normals.clear();
+					candidateCheck.clear();
+
+					mymeshlets.emplace_back();
+					curr = &mymeshlets.back();
+				}
 			}
-		}
-		else {
+
 			if (candidates.empty())
 			{
-				positions.clear();
-				normals.clear();
-				candidateCheck.clear();
+				while (triIndex < nfaces && checklist[triIndex])
+					++triIndex;
 
-				mymeshlets.emplace_back();
-				curr = &mymeshlets.back();
+				if (triIndex == nfaces)
+					break;
+
+				candidates.push_back(std::make_pair(triIndex, 0.0f));
+				candidateCheck.insert(triIndex);
+			}
+
+		}
+
+		if (mymeshlets.back().faces.empty())
+		{
+			mymeshlets.pop_back();
+		}
+
+		//可以在这里做一个模拟退火？
+		// cut sharp triangles
+		endTime = std::chrono::steady_clock::now();
+		std::cout << "first cluster down" << std::endl;
+		duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+		std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
+
+		startTime = std::chrono::steady_clock::now();
+		//识别环条状meshlet以及近似还条状的meshlet,记录并分割
+		while (SharpTriCut(mesh)) {};
+
+		std::cout << "sharp cut down" << std::endl;
+		endTime = std::chrono::steady_clock::now();
+		duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+		std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
+
+		meshlets.resize(mymeshlets.size());
+		for (uint i = 0; i < mymeshlets.size(); ++i) {
+			for (auto& face : mymeshlets[i].faces)
+				meshlets[i].push_back(face);
+		}
+		
+		writeVectorToFile(meshlets, filename);
+	}
+	else {
+		mymeshlets.resize(meshlets.size());
+		for (uint i = 0; i < meshlets.size(); ++i)
+			for (auto& face : meshlets[i])
+				mymeshlets[i].faces.insert(face);
+
+		for (uint i = 0; i < meshlets.size(); ++i) {
+			for (auto& face : meshlets[i]) {
+				auto fh = mesh.face_handle(face);
+				for (auto fvit = mesh.cfv_iter(fh); fvit.is_valid(); ++fvit)
+					mymeshlets[i].vertices.insert(fvit->idx());
 			}
 		}
 
-		if (candidates.empty())
-		{
-			while (triIndex < nfaces && checklist[triIndex])
-				++triIndex;
-
-			if (triIndex == nfaces)
-				break;
-
-			candidates.push_back(std::make_pair(triIndex, 0.0f));
-			candidateCheck.insert(triIndex);
-		}
-
 	}
+	
+	startTime = std::chrono::steady_clock::now();
 
-	if (mymeshlets.back().faces.empty())
-	{
-		mymeshlets.pop_back();
-	}
-
-	//可以在这里做一个模拟退火？
-	// cut sharp triangles
-	auto endTime = std::chrono::steady_clock::now();
-	std::cout << "first cluster down" << std::endl;
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-	std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
-
-	 startTime = std::chrono::steady_clock::now();
-	//识别环条状meshlet以及近似还条状的meshlet,记录并分割
-	while (SharpTriCut(mesh)) {};
-	std::cout << "sharp cut down" << std::endl;
-	 endTime = std::chrono::steady_clock::now();
-	std::cout << "first cluster down" << std::endl;
-	 duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-	std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
-
-	 startTime = std::chrono::steady_clock::now();
 	TryShapeHeal(mesh);
+
 	std::cout << "shape heal down" << std::endl;
 	 endTime = std::chrono::steady_clock::now();
-	std::cout << "first cluster down" << std::endl;
 	 duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 	std::cout << "代码执行时间: " << duration.count() << " 毫秒" << std::endl;
 
@@ -742,10 +775,17 @@ bool NewCluster::SharpTriCut(const MyMesh& mesh)
 				SingleTriMeshlets.push_back(mid);
 				NeighBoor.push_back(meshletsids[0]);
 			}
+			else if ((meshletsids.size() == 3) && ((meshletsids[0] == meshletsids[1]) || (meshletsids[0] == meshletsids[2])||(meshletsids[1]==meshletsids[2]))) {
+				SingleTriMeshlets.push_back(mid);
+				if((meshletsids[0] == meshletsids[1]) || (meshletsids[0] == meshletsids[2]))
+					NeighBoor.push_back(meshletsids[0]);
+				else
+					NeighBoor.push_back(meshletsids[1]);
+			}
 		}
 	}
 
-	if (candidates.empty())
+	if (candidates.empty()&&SingleTriMeshlets.empty())
 		return false;
 
 	std::sort(candidates.begin(), candidates.end(), [](const FaceCandidate& a, const FaceCandidate& b) -> bool
@@ -865,7 +905,7 @@ void NewCluster::TryShapeHeal(const MyMesh& mesh)
 //如果好的返回true
 bool NewCluster::ShapeErrorDetect(const MyMesh& mesh, uint mid)
 {
-	if (mid == 1638)
+	if (mid == 81161)
 		std::cout << "debug" << std::endl;
 
 
@@ -1163,13 +1203,13 @@ void NewCluster::GenerateTorusNewFaceStart(const MyMesh& mesh, const std::vector
 	auto& detector = detecters[mid];
 	auto& meshlet = mymeshlets[mid];
 
-	uint he = loops[0][0];
+	uint he = loops[1][0];
 	auto heh = mesh.halfedge_handle(he);
 	auto startfh = mesh.face_handle(heh);
 	uint startidx = startfh.idx();
 
 	std::unordered_set<uint> targetfaces;
-	for (auto& heid : loops[1]) {
+	for (auto& heid : loops[0]) {
 		auto heidh = mesh.halfedge_handle(heid);
 		auto fh = mesh.face_handle(heidh);
 		targetfaces.insert(fh.idx());

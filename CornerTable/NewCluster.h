@@ -53,7 +53,7 @@ class NewCluster
 public:
 
 	std::vector<Meshlet_built> mymeshlets;
-	std::vector<std::vector<int>> oldmeshlets;
+	std::vector<std::vector<uint>> oldmeshlets;
 	std::vector<ShapeHeal> detecters;
 	//
 	//std::vector<std::vector<uint>> Ewires;
@@ -73,7 +73,7 @@ public:
 
 
 public:
-	NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh);
+	NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh,Meshlets meshlets,const std::string& filename);
 
 private:
 	bool AddToMeshlet(int maxv, int maxt, Meshlet_built* curr, std::array<uint, 3> pnts,uint& faceid);

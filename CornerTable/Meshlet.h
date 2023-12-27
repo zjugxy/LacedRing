@@ -2,7 +2,7 @@
 #include"Viewer/viewermath.h"
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
-typedef std::vector<std::vector<int>> Meshlets;
+typedef std::vector<std::vector<uint>> Meshlets;
 #include<string>
 using uint = unsigned int;
 //一个SSBO，其中装载了所有三角形序列

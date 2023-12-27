@@ -9,17 +9,23 @@ typedef OpenMesh::TriMesh_ArrayKernelT<>  MyMesh;
 #include"NewCluster.h"
 #include"NewLWGenerator.h"
 #include"MeshFile.h"
+#include"Meshlet.h"
 bool meshletexist = false;
 std::string meshletfilename;
     
 #define USINGSC 1
 
+
+
 int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/Models/head/head.obj";
+    std::string filename = "E:/OpenMesh/Models/AsiaDragon/AsiaDragon.obj";
+    std::string debugfile = "E:/OpenMesh/Models/AsiaDragon/AsiaDragon.meshlets";
     // generate vertices
+    meshlets = readVectorFromFile(debugfile);
+
 
     try
     {
@@ -48,12 +54,14 @@ int main()
         //MyCluster clu(mesh, 64, 126, 0.5);
         //meshlets = clu.oldmeshlets;
 
-        NewCluster nclu(64, 126,mesh);
+        NewCluster nclu(64, 126,mesh,meshlets,debugfile);
         meshlets = nclu.oldmeshlets;
 
-        NewLWGenerator nlwgen(nclu);
-        nlwgen.FUNC(mesh);
-    
+
+        int flag = 2;
+
+
+
 
 
 
@@ -65,16 +73,16 @@ int main()
 
 
 
-        int flag = 2;
+
 
         if (flag == 0) {
             myscene.LoadSCMeshlet(mesh, meshlets);
-            myscene.LoadPoints(mesh);
+            //myscene.LoadPoints(mesh);
             //myscene.LoadInternalWire(mesh, nlwgen);
             //myscene.LoadLaceWire(mesh, nclu);
             //myscene.LoadNormalLine(nclu);
 
-            myscene.LoadLines(mesh, meshlets);
+            //myscene.LoadLines(mesh, meshlets);
             myview.set(&myscene);
             myview.setMeshshader("SCmeshshader.glsl", "TSfragshader.glsl");
             myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
@@ -83,8 +91,8 @@ int main()
             {
                 myview.processinput();
                 myview.RenderSCML();
-                myview.RenderPoint();
-                myview.RenderNormalLine();
+                //myview.RenderPoint();
+                //myview.RenderNormalLine();
                 //myview.RenderWireLine();
                 //myview.RenderNormalLine();
                 //myview.RenderInterWire();
@@ -95,7 +103,8 @@ int main()
             exit(EXIT_SUCCESS);
         }
         else if(flag ==1){
-
+            NewLWGenerator nlwgen(nclu);
+            nlwgen.FUNC(mesh);
             myscene.LoadSimpleWireMeshlet(nlwgen);
             //myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
@@ -116,7 +125,8 @@ int main()
             exit(EXIT_SUCCESS);
         }
         else {
-
+            NewLWGenerator nlwgen(nclu);
+            nlwgen.FUNC(mesh);
             myscene.LoadGPULW(nlwgen);
             myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);

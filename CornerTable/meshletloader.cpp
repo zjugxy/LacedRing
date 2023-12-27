@@ -183,7 +183,7 @@ Meshlets readVectorFromFile(const std::string& filename)
 
 	while (std::getline(inFile, line)) {
 		linenum--;
-		std::vector<int> row;
+		std::vector<uint> row;
 		std::stringstream ss(line);
 		int element,elenum;
 		ss >> elenum;
