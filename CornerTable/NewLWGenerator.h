@@ -48,6 +48,50 @@ struct MeshletDes
 };
 
 
+struct Box2d {
+	float miny = 0;
+	float minz = 0;
+	float maxy = 0;
+	float maxz = 0;
+
+	void refresh(float yvalue, float zvalue);
+	float getSumLength();
+};
+
+struct UnitBox {
+	float minx = 0;
+	float miny = 0;
+	float minz = 0;
+	float maxx = 0;
+	float maxy = 0;
+	float maxz = 0;
+	void refresh(float xvalue,float yvalue, float zvalue);
+
+};
+
+
+struct PackGEO {
+	bool needtransform;
+	bool isXPlatForm = false;
+	std::vector<vec3> nopackgeo;
+
+	Eigen::Vector3d euler;
+	Eigen::Vector3d translation;
+	Eigen::Vector3d scaleelem;
+
+
+
+	uchar rotatx, rotaty, rotatz;
+	uchar translatex, translatey, translatez;
+	uchar scalex, scaley, scalez;
+
+	uchar xnum, ynum, znum;
+
+
+	std::vector<vec3> dataunit;
+	std::vector<vec3> datatocompress;
+};
+
 
 class NewLWGenerator
 {
@@ -73,6 +117,8 @@ public:
 	std::vector<float> intergeo;
 	std::vector<float> extergeo;
 
+	std::vector<PackGEO> packexter;
+	std::vector<PackGEO> packinter;
 
 
 public:
@@ -93,11 +139,16 @@ private:
 	void PushAtFront(std::vector<std::unordered_set<uint>>& lpnts, const MyMesh& mesh, std::deque<uint>& singlewire, std::unordered_set<uint>& pntstoremove);
 	void PackSimpleLaceWire(const MyMesh& mesh);
 
+	void VertexQuantization(const MyMesh& mesh);
+
 	void PackGPULW(const MyMesh& mesh);
 
 	std::array<uchar, 4> DiscomposeUint(uint value);
 	float PackChar4Float(uchar c0, uchar c1, uchar c2, uchar c3);
 	uint PackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3);
+	void getStartAxis(Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis, const Eigen::Vector3d& normal);
 
+	bool SimpleCheck(Eigen::Vector3d eulerxyz, Eigen::Vector3d newx, Eigen::Vector3d newy, Eigen::Vector3d newz);
+	void NextSimpleCheck(const PackGEO& tempgeo,const std::vector<uint>& vertexvec, const MyMesh& mesh);
 };
 

@@ -128,6 +128,7 @@ void main(){
 	for(int i = 0; i+threadid<intergeonum;i+=GROUP_SIZE){
 			uint ingeostart = intergeolocation + (i+threadid)*3;
 			vec4 vergeo = vec4(InterGeo[ingeostart],InterGeo[ingeostart+1],InterGeo[ingeostart+2],1.0f);
+
 			gl_MeshVerticesNV[i+threadid].gl_Position = projection*view*model*vergeo;
 			v_out[i+threadid].color = meshletcolor;
 	}

@@ -21,8 +21,8 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/Models/AsiaDragon/AsiaDragon.obj";
-    std::string debugfile = "E:/OpenMesh/Models/AsiaDragon/AsiaDragon.meshlets";
+    std::string filename = "E:/OpenMesh/Models/wtbunny/wtbunny.obj";
+    std::string debugfile = "E:/OpenMesh/Models/wtbunny/wtbunny.meshlets";
     // generate vertices
     meshlets = readVectorFromFile(debugfile);
 
