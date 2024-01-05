@@ -36,8 +36,8 @@ void NewLWGenerator::FUNC(const MyMesh& mesh)
 	LeftRightGenertor(mesh);
 	PackSimpleLaceWire(mesh);
 
-	VertexQuantization(mesh);
-
+	//VertexQuantization(mesh);
+	NewVertexQuantization(mesh);
 	PackGPULW(mesh);
 }
 
@@ -865,8 +865,8 @@ void NewLWGenerator::VertexQuantization(const MyMesh& mesh)
 				auto pnt = mesh.point(mesh.vertex_handle(vertexset[i]));
 				auto rightpnt = Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] };
 
-				vec3 rawdata = tempgeo.dataunit[i];
-				Eigen::Vector3d temppnt = newXAxis * rawdata.x * descalex + newYAxis * rawdata.y * descaley + newZAxis * rawdata.z * descalez;
+				Eigen::Vector3d rawdata = tempgeo.dataunit[i];
+				Eigen::Vector3d temppnt = newXAxis * rawdata.x() * descalex + newYAxis * rawdata.y() * descaley + newZAxis * rawdata.z() * descalez;
 				temppnt += anotherdis;
 				//if((temppnt - rightpnt).norm()>0.1)
 					std::cout<<"解压缩与实际值比较" << (temppnt - rightpnt).norm() << std::endl;
@@ -887,7 +887,8 @@ void NewLWGenerator::VertexQuantization(const MyMesh& mesh)
 				compresszvalue /= descalez;
 
 				tempgeo.datatocompress.emplace_back(compressxvalue, compressyvalue, compresszvalue);
-				std::cout << (tempgeo.datatocompress[i] - tempgeo.dataunit[i]).length();
+				//std::cout << (tempgeo.datatocompress[i] - tempgeo.dataunit[i]).length();
+
 			}
 
 		
@@ -937,8 +938,8 @@ void NewLWGenerator::VertexQuantization(const MyMesh& mesh)
 				auto pnt = mesh.point(mesh.vertex_handle(vertexset[i]));
 				auto rightpnt = Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] };
 
-				vec3 rawdata = tempgeo.dataunit[i];
-				Eigen::Vector3d temppnt = newXAxis * rawdata.x * descalex + newYAxis * rawdata.y * descaley + newZAxis * rawdata.z * descalez;
+				Eigen::Vector3d rawdata = tempgeo.dataunit[i];
+				Eigen::Vector3d temppnt = newXAxis * rawdata.x() * descalex + newYAxis * rawdata.y() * descaley + newZAxis * rawdata.z() * descalez;
 				temppnt += anotherdis;
 				//if((temppnt - rightpnt).norm()>0.1)
 				std::cout << "解压缩与实际值比较" << (temppnt - rightpnt).norm() << std::endl;
@@ -960,6 +961,202 @@ void NewLWGenerator::VertexQuantization(const MyMesh& mesh)
 
 	}
 
+}
+
+void NewLWGenerator::fitPlane(const MyMesh& mesh, const std::vector<uint>& verset, Eigen::Vector3d& centroid, Eigen::Vector3d& normal)
+{
+	Eigen::MatrixXd WireVertices(3, verset.size());
+	for (uint i = 0; i < verset.size(); ++i) {
+		auto ver = verset[i];
+		auto vh = mesh.vertex_handle(ver);
+		auto pnt = mesh.point(vh);
+		WireVertices.col(i) << pnt[0], pnt[1], pnt[2];
+	}
+
+	centroid = WireVertices.rowwise().mean().transpose();
+	Eigen::MatrixXd centeredPoints = WireVertices.colwise() - centroid;
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(centeredPoints, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	normal = svd.matrixU().col(2).normalized();
+}
+
+Box2d NewLWGenerator::getYZAxis(const MyMesh& mesh, const std::vector<uint>& verset, Eigen::Vector3d xaxis, Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis, float anglediff,Eigen::Vector3d centroid)
+{
+	Eigen::Vector3d starty, startz;
+	getStartAxis(starty, startz, xaxis);
+
+	std::vector<Eigen::Vector3d> pointset;
+	for (const auto& ver : verset) {
+		auto vh = mesh.vertex_handle(ver);
+		auto pnt = mesh.point(vh);
+		pointset.emplace_back(pnt[0] - centroid[0], pnt[1] - centroid[1], pnt[2] - centroid[2]);
+	}
+
+
+	Box2d globox{ -1000000.0,-1000000.0,1000000.0,1000000.0 };
+	uint glocnt = 0;
+
+	for (uint anglecnt = 0; anglecnt < uint(PI/2.0f / anglediff); anglecnt++) {
+		float radian = anglecnt * anglediff;
+		Eigen::Vector3d tempyaxis = cos(radian) * starty + sin(radian) * startz;
+		Eigen::Vector3d tempzaxis = cos(radian) * startz - sin(radian) * starty;
+		assert(tempyaxis.dot(tempzaxis) < 0.0001f);
+		//计算2维包围盒
+		Box2d box;
+
+		for (auto pnt : pointset) {
+			float yvalue = pnt.dot(tempyaxis);
+			float zvalue = pnt.dot(tempzaxis);
+			box.refresh(yvalue, zvalue);
+		}
+		if (box.getSumLength() < globox.getSumLength()) {
+			globox = box;
+			glocnt = anglecnt;
+		}
+	}
+
+	float finalradian = glocnt * anglediff;
+	yaxis = cos(finalradian) * starty + sin(finalradian) * startz;
+	zaxis = cos(finalradian) * startz - sin(finalradian) * starty;
+
+	return globox;
+}
+
+void NewLWGenerator::getScaleBox(const MyMesh& mesh, const std::vector<uint>& verset, Eigen::Vector3d centroid, UnitBox& scalebox, Eigen::Vector3d xaxis, Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis)
+{
+	for (const auto& ver : verset) {
+		auto vh = mesh.vertex_handle(ver);
+		auto pnt = mesh.point(vh);
+		Eigen::Vector3d temppoint{ pnt[0] - centroid[0],pnt[1] - centroid[1],pnt[2] - centroid[2] };
+		float xvalue = temppoint.dot(xaxis);
+		float yvalue = temppoint.dot(yaxis);
+		float zvalue = temppoint.dot(zaxis);
+
+		scalebox.refresh(std::abs(xvalue), std::abs(yvalue), std::abs(zvalue));
+	}
+}
+
+void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
+{
+	packexter.resize(gloEwires.size());
+	packinter.resize(targets.size());
+
+	UnitBox MeshTransBox,MeshScaleBox;
+	bool firstadd = true;
+
+	for (uint eid = 0; eid < packexter.size(); ++eid) {
+		//个数小于3的就不处理
+		if (gloEwires[eid].vertex.size() < 3) {
+			PackNoPlane(packexter[eid], mesh, gloEwires[eid]);
+			continue;
+		}
+
+		auto& tempgeo = packexter[eid];
+		auto& ewire = gloEwires[eid];
+
+		Eigen::Vector3d centroid, normal,newcentroid;
+		Eigen::Vector3d finalyaxis, finalzaxis;
+		Box2d globox;
+		UnitBox scalebox;
+
+		fitPlane(mesh, ewire.vertex, centroid, normal);
+		globox = getYZAxis(mesh, ewire.vertex, normal,finalyaxis,finalzaxis,15.0/180.0*PI,centroid);
+		newcentroid = centroid + (globox.maxy + globox.miny) / 2.0f * finalyaxis + (globox.maxz + globox.minz) / 2.0f * finalzaxis;
+		getScaleBox(mesh, ewire.vertex, newcentroid, scalebox,normal,finalyaxis,finalzaxis);
+		
+		//pack tempgeo
+		tempgeo.needtransform = true;
+		tempgeo.translation = newcentroid;
+		tempgeo.scaleelem = Eigen::Vector3d{ scalebox.maxx,scalebox.maxy,scalebox.maxz };
+		Eigen::Matrix3d rotationMatrix;
+		rotationMatrix << normal, finalyaxis, finalzaxis;
+		Eigen::Vector3d eulerXYZ = rotationMatrix.eulerAngles(0, 1, 2);
+		tempgeo.euler = eulerXYZ;
+
+		//Eigen::AngleAxisd rotationX(eulerXYZ[0], Eigen::Vector3d::UnitX());
+		//Eigen::AngleAxisd rotationY(eulerXYZ[1], Eigen::Vector3d::UnitY());
+		//Eigen::AngleAxisd rotationZ(eulerXYZ[2], Eigen::Vector3d::UnitZ());
+		//Eigen::Matrix3d newrotationMatrix = rotationX.matrix() * rotationY.matrix() * rotationZ.matrix();
+		//相当于一个reverse rotation matrix
+
+		//	x - axis
+		//  y - axis  --> transpose --> newratationmatrix (x*y*z)
+		//  z - axis
+
+		//refresh meshtranbox ,meshscalebox
+		NewSimpleCheck(tempgeo, mesh, ewire.vertex);
+
+		if (firstadd) {
+			MeshTransBox = UnitBox{ float(newcentroid[0]),float(newcentroid[1]),float(newcentroid[2])
+				,float(newcentroid[0]),float(newcentroid[1]),float(newcentroid[2]) };
+			MeshScaleBox = UnitBox{
+				scalebox.maxx,scalebox.maxy,scalebox.maxz,
+				scalebox.maxx,scalebox.maxy,scalebox.maxz };
+			firstadd = false;
+		}
+		else {
+			MeshTransBox.refresh(newcentroid[0], newcentroid[1], newcentroid[2]);
+			if (scalebox.maxx < 1e-10)
+				scalebox.maxx = MeshScaleBox.minx;
+			MeshScaleBox.refresh(scalebox.maxx, scalebox.maxy, scalebox.maxz);
+		}
+	}
+
+	for (uint iid = 0; iid < packinter.size(); ++iid) {
+		//个数小于3的就不处理
+		if (targets[iid].InternalLW.vertex.size() < 3) {
+			PackNoPlane(packinter[iid], mesh, targets[iid].InternalLW);
+			continue;
+		}
+
+		auto& tempgeo = packinter[iid];
+		auto& ewire = targets[iid].InternalLW;
+
+		Eigen::Vector3d centroid, normal, newcentroid;
+		Eigen::Vector3d finalyaxis, finalzaxis;
+		Box2d globox;
+		UnitBox scalebox;
+
+		fitPlane(mesh, ewire.vertex, centroid, normal);
+		globox = getYZAxis(mesh, ewire.vertex, normal, finalyaxis, finalzaxis, 15.0 / 180.0 * PI, centroid);
+		newcentroid = centroid + (globox.maxy + globox.miny) / 2.0f * finalyaxis + (globox.maxz + globox.minz) / 2.0f * finalzaxis;
+		getScaleBox(mesh, ewire.vertex, newcentroid, scalebox, normal, finalyaxis, finalzaxis);
+
+		//pack tempgeo
+		tempgeo.needtransform = true;
+		tempgeo.translation = newcentroid;
+		tempgeo.scaleelem = Eigen::Vector3d{ scalebox.maxx,scalebox.maxy,scalebox.maxz };
+		Eigen::Matrix3d rotationMatrix;
+		rotationMatrix << normal, finalyaxis, finalzaxis;
+		Eigen::Vector3d eulerXYZ = rotationMatrix.eulerAngles(0, 1, 2);
+		tempgeo.euler = eulerXYZ;
+
+		//refresh meshtranbox ,meshscalebox
+		NewSimpleCheck(tempgeo, mesh, ewire.vertex);
+
+		MeshTransBox.refresh(newcentroid[0], newcentroid[1], newcentroid[2]);
+		if (scalebox.maxx < 1e-10)
+			scalebox.maxx = MeshScaleBox.minx;
+		MeshScaleBox.refresh(scalebox.maxx, scalebox.maxy, scalebox.maxz);
+	}
+	UcharRadGen();
+
+	//for (uint eid = 0; eid < gloEwires.size(); ++eid)
+	//	if(packexter[eid].needtransform == true)
+	//		NewSimpleCheck(packexter[eid], mesh, gloEwires[eid].vertex);
+	TranslatePack(mesh, MeshTransBox);
+
+	return;
+}
+
+void NewLWGenerator::PackNoPlane(PackGEO& tempgeo, const MyMesh& mesh, const MeshletBody& ewire)
+{
+	tempgeo.needtransform = false;
+	for (const auto& ver : ewire.vertex) {
+		if (ver == EMPTYWIRE)
+			return;
+		auto pnt = mesh.point(mesh.vertex_handle(ver));
+		tempgeo.nopackgeo.emplace_back(pnt[0], pnt[1], pnt[2]);
+	}
 }
 
 void NewLWGenerator::PackGPULW(const MyMesh& mesh)
@@ -1201,6 +1398,153 @@ void NewLWGenerator::NextSimpleCheck(const PackGEO& tempgeo,const std::vector<ui
 		//std::cout<<"check in 恢复data" << distance  << std::endl;
 		assert(distance < 1e-8);
 	}
+}
+
+void NewLWGenerator::NewSimpleCheck(PackGEO& tempgeo, const MyMesh& mesh, const std::vector<uint>& verset)
+{
+	Eigen::Vector3d eulerXYZ = tempgeo.euler;
+	Eigen::AngleAxisd rotationX(eulerXYZ[0], Eigen::Vector3d::UnitX());
+	Eigen::AngleAxisd rotationY(eulerXYZ[1], Eigen::Vector3d::UnitY());
+	Eigen::AngleAxisd rotationZ(eulerXYZ[2], Eigen::Vector3d::UnitZ());
+	//dequantize
+	Eigen::Matrix3d rotationMatrix = rotationX.matrix() * rotationY.matrix() * rotationZ.matrix();
+	Eigen::DiagonalMatrix<double, 3> scaleMatirx;
+	scaleMatirx.diagonal() << tempgeo.scaleelem[0], tempgeo.scaleelem[1], tempgeo.scaleelem[2];
+
+	//quanitize
+	Eigen::Matrix3d revrotat = rotationMatrix.transpose();
+	Eigen::DiagonalMatrix<double, 3> revscale;
+	revscale.diagonal() << 1.0/tempgeo.scaleelem[0], 1.0/tempgeo.scaleelem[1], 1.0/tempgeo.scaleelem[2];
+
+
+	Eigen::Matrix3d com = revscale * revrotat ;
+	Eigen::Matrix3d decom =   rotationMatrix* scaleMatirx;
+	//
+	for (const auto& ver : verset) {
+		auto vh = mesh.vertex_handle(ver);
+		auto pnt = mesh.point(vh);
+		auto rawdata = Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] };
+
+		Eigen::Vector3d unitdata = com * (rawdata - tempgeo.translation);
+		tempgeo.dataunit.push_back(unitdata);
+		Eigen::Vector3d cmpdata = decom * unitdata + tempgeo.translation;
+
+		double diff = (cmpdata - rawdata).norm();
+		assert(diff < 1e-12);
+		std::cout << "distance cmp and raw data" << diff << std::endl;
+	}
+
+}
+
+void NewLWGenerator::UcharRadGen()
+{
+	for (auto& tempgeo : packexter) {
+		if (tempgeo.needtransform == false)
+			continue;
+		auto& euler = tempgeo.euler;
+		if (euler.x() < 0)euler.x() += 2 * PI;
+		if (euler.y() < 0)euler.y() += 2 * PI;
+		if (euler.z() < 0)euler.z() += 2 * PI;
+
+		assert(2 * PI >= euler.x());
+		assert(2 * PI >= euler.y());
+		assert(2 * PI >= euler.z());
+
+		float value;
+		value = 255.0 * euler.x() / (PI * 2);
+		tempgeo.rotatx = myclamp(value, 0, 255);
+
+		value = 255.0 * euler.y() / (PI * 2);
+		tempgeo.rotaty = myclamp(value, 0, 255);
+
+		value = 255.0 * euler.z() / (PI * 2);
+		tempgeo.rotatz = myclamp(value, 0, 255);
+	}
+
+	for (auto& tempgeo : packinter) {
+		if (tempgeo.needtransform == false)
+			continue;
+		auto& euler = tempgeo.euler;
+		if (euler.x() < 0)euler.x() += 2 * PI;
+		if (euler.y() < 0)euler.y() += 2 * PI;
+		if (euler.z() < 0)euler.z() += 2 * PI;
+
+		assert(2*PI >= euler.x());
+		assert(2*PI >= euler.y());
+		assert(2*PI >= euler.z());
+
+		float value;
+		value = 255.0 * euler.x() / (PI*2);
+		tempgeo.rotatx = myclamp(value, 0, 255);
+
+		value = 255.0 * euler.y() / (PI*2);
+		tempgeo.rotaty = myclamp(value, 0, 255);
+
+		value = 255.0 * euler.z() / (PI*2);
+		tempgeo.rotatz = myclamp(value, 0, 255);
+
+	}
+}
+
+void NewLWGenerator::TranslatePack(const MyMesh& mesh, UnitBox TranslateBox)
+{
+
+	//更新每一个meshlet的diff
+
+	for (uint eid = 0; eid < packexter.size(); ++eid) {
+		auto& tempgeo = packexter[eid];
+		if (tempgeo.needtransform == false)continue;
+		//压缩角度
+		Eigen::Vector3d eulerXYZ{
+			float(tempgeo.rotatx) / 255.0 * TWOPI,
+			float(tempgeo.rotaty) / 255.0 * TWOPI,
+			float(tempgeo.rotatz) / 255.0 * TWOPI
+		};
+		Eigen::AngleAxisd rotationX(eulerXYZ[0], Eigen::Vector3d::UnitX());
+		Eigen::AngleAxisd rotationY(eulerXYZ[1], Eigen::Vector3d::UnitY());
+		Eigen::AngleAxisd rotationZ(eulerXYZ[2], Eigen::Vector3d::UnitZ());
+		//dequantize
+		Eigen::Matrix3d rotationMatrix = rotationX.matrix() * rotationY.matrix() * rotationZ.matrix();
+		Eigen::DiagonalMatrix<double, 3> scaleMatirx;
+		scaleMatirx.diagonal() << tempgeo.scaleelem[0], tempgeo.scaleelem[1], tempgeo.scaleelem[2];
+		Eigen::Matrix3d decom = rotationMatrix * scaleMatirx;
+
+		//
+		float totalabs = 0;
+		Eigen::Vector3d diffmean{ 0,0,0 };
+
+		for (uint i = 0; i < gloEwires[eid].vertex.size(); ++i) {
+			auto pnt = mesh.point(mesh.vertex_handle(gloEwires[eid].vertex[i]));
+			Eigen::Vector3d rawdata{ pnt[0],pnt[1],pnt[2] };
+			Eigen::Vector3d cmpdata = decom * tempgeo.dataunit[i] + tempgeo.translation;
+			//std::cout << "distance after compact rad " << (cmpdata - rawdata).norm() << std::endl;
+			totalabs += std::abs((rawdata - cmpdata).norm());
+			diffmean += rawdata - cmpdata;
+		}
+		std::cout << "更新前 diff " << totalabs << std::endl;
+		diffmean /= gloEwires[eid].vertex.size();
+
+		Eigen::Vector3d newtranslation = diffmean + tempgeo.translation;
+		totalabs = 0;
+
+		for (uint i = 0; i < gloEwires[eid].vertex.size(); ++i) {
+			auto pnt = mesh.point(mesh.vertex_handle(gloEwires[eid].vertex[i]));
+			Eigen::Vector3d rawdata{ pnt[0],pnt[1],pnt[2] };
+			Eigen::Vector3d cmpdata = decom * tempgeo.dataunit[i] + newtranslation;
+			//std::cout << "distance after compact rad " << (cmpdata - rawdata).norm() << std::endl;
+			totalabs += std::abs((rawdata - cmpdata).norm());
+		}
+		std::cout << "更新后 diff " << totalabs << std::endl;
+	}
+
+
+}
+
+uchar NewLWGenerator::myclamp(float value, uchar lowbound, uchar highbound)
+{
+	if (value > highbound)return highbound;
+	else if (value < lowbound)return lowbound;
+	return uchar(uint(value));
 }
 
 void NewLWGenerator::ExportFile(const std::string& filename)

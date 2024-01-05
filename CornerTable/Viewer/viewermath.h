@@ -8,7 +8,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/rotate_vector.hpp>
 
-#define PI 3.1415926
+#define PI 3.141592653589793
+
 #define TWOPI 6.28318530718
 using glm::vec2;
 using glm::vec3;

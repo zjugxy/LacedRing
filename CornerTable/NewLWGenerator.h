@@ -59,6 +59,7 @@ struct Box2d {
 };
 
 struct UnitBox {
+	
 	float minx = 0;
 	float miny = 0;
 	float minz = 0;
@@ -79,16 +80,12 @@ struct PackGEO {
 	Eigen::Vector3d translation;
 	Eigen::Vector3d scaleelem;
 
-
-
 	uchar rotatx, rotaty, rotatz;
 	uchar translatex, translatey, translatez;
 	uchar scalex, scaley, scalez;
 
 	uchar xnum, ynum, znum;
-
-
-	std::vector<vec3> dataunit;
+	std::vector<Eigen::Vector3d> dataunit;
 	std::vector<vec3> datatocompress;
 };
 
@@ -141,6 +138,14 @@ private:
 
 	void VertexQuantization(const MyMesh& mesh);
 
+	void fitPlane(const MyMesh&mesh,const std::vector<uint>&verset, Eigen::Vector3d& centroid, Eigen::Vector3d& normal);
+	Box2d getYZAxis(const MyMesh& mesh, const std::vector<uint>& verset, Eigen::Vector3d xaxis, Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis, float anglediff,Eigen::Vector3d centroid);
+	void getScaleBox(const MyMesh& mesh, const std::vector<uint>& verset, Eigen::Vector3d centroid, UnitBox& scalebox, Eigen::Vector3d xaxis, Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis);
+	
+	void NewVertexQuantization(const MyMesh& mesh);
+
+	void PackNoPlane(PackGEO& tempgeo, const MyMesh& mesh, const MeshletBody& ewire);
+
 	void PackGPULW(const MyMesh& mesh);
 
 	std::array<uchar, 4> DiscomposeUint(uint value);
@@ -150,5 +155,13 @@ private:
 
 	bool SimpleCheck(Eigen::Vector3d eulerxyz, Eigen::Vector3d newx, Eigen::Vector3d newy, Eigen::Vector3d newz);
 	void NextSimpleCheck(const PackGEO& tempgeo,const std::vector<uint>& vertexvec, const MyMesh& mesh);
+
+	void NewSimpleCheck(PackGEO& tempgeo, const MyMesh& mesh, const std::vector<uint>& verset);
+
+	void UcharRadGen();
+	void TranslatePack(const MyMesh& mesh, UnitBox TranslateBox);
+
+
+	uchar myclamp(float value, uchar lowbound, uchar highbound);
 };
 
