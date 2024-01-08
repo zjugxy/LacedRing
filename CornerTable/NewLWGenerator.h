@@ -86,7 +86,7 @@ struct PackGEO {
 
 	uchar xnum, ynum, znum;
 	std::vector<Eigen::Vector3d> dataunit;
-	std::vector<vec3> datatocompress;
+	std::vector<Eigen::Vector3d> datatocompress;
 };
 
 
@@ -116,7 +116,8 @@ public:
 
 	std::vector<PackGEO> packexter;
 	std::vector<PackGEO> packinter;
-
+	UnitBox MeshTransBox;
+	UnitBox MeshScaleBox;
 
 public:
 	NewLWGenerator(const NewCluster& nclu);
@@ -157,6 +158,10 @@ private:
 	void NextSimpleCheck(const PackGEO& tempgeo,const std::vector<uint>& vertexvec, const MyMesh& mesh);
 
 	void NewSimpleCheck(PackGEO& tempgeo, const MyMesh& mesh, const std::vector<uint>& verset);
+
+	void CheckByDequantize(const MyMesh& mesh);
+
+	void FinalScaleGen(const MyMesh& mesh);
 
 	void UcharRadGen();
 	void TranslatePack(const MyMesh& mesh, UnitBox TranslateBox);
