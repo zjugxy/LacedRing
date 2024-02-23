@@ -157,5 +157,6 @@
     <Text Include="SCmeshshader.glsl">
       <Filter>shaders\Meshshader</Filter>
     </Text>
+    <Text Include="文本.txt" />
   </ItemGroup>
 </Project>

@@ -192,6 +192,7 @@
   <ItemGroup>
     <Text Include="readme.md" />
     <Text Include="SCmeshshader.glsl" />
+    <Text Include="文本.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

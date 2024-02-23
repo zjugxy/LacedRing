@@ -59,20 +59,10 @@ int main()
 
 
         int flag = 2;
-
-
-
-
-
-
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
         myscene.LoadCornerTable(mesh);
-
-
-
-
 
 
         if (flag == 0) {

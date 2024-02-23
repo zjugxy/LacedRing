@@ -3,6 +3,8 @@
 #include<unordered_set>
 #include"NewCluster.h"
 
+
+
 using uchar = unsigned char;
 using uint = unsigned int;
 
@@ -119,6 +121,8 @@ public:
 	UnitBox MeshTransBox;
 	UnitBox MeshScaleBox;
 
+	std::vector<std::vector<int>> bitnums;
+
 public:
 	NewLWGenerator(const NewCluster& nclu);
 
@@ -149,13 +153,13 @@ private:
 
 	void PackGPULW(const MyMesh& mesh);
 
+	void BitSortGen(int highestnum,int minvalue);
+	void VertexBitGen(const MyMesh& mesh,float errorpercent);
+
 	std::array<uchar, 4> DiscomposeUint(uint value);
 	float PackChar4Float(uchar c0, uchar c1, uchar c2, uchar c3);
 	uint PackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3);
 	void getStartAxis(Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis, const Eigen::Vector3d& normal);
-
-	bool SimpleCheck(Eigen::Vector3d eulerxyz, Eigen::Vector3d newx, Eigen::Vector3d newy, Eigen::Vector3d newz);
-	void NextSimpleCheck(const PackGEO& tempgeo,const std::vector<uint>& vertexvec, const MyMesh& mesh);
 
 	void NewSimpleCheck(PackGEO& tempgeo, const MyMesh& mesh, const std::vector<uint>& verset);
 
@@ -168,5 +172,9 @@ private:
 
 
 	uchar myclamp(float value, uchar lowbound, uchar highbound);
+	void LimitEigen(Eigen::Vector3d& vec);
+
+
+	Eigen::Vector3d cutfloatByBit(Eigen::Vector3d rawvalue, uint xnum, uint ynum, uint znum);
 };
 
