@@ -86,6 +86,8 @@ private:
 	void PackOldmeshlets();
 	void GenerateEwire(const MyMesh& mesh);
 
+	void DeleteSmallMesh(const MyMesh& mesh);
+
 	uint CalculateVertexCnt(const MyMesh& mesh, uint vidx,const std::vector<uint>& meshletid);
 	void BuildEwiresOfSingleMeshlet(EwireBuildSet& buildset, const MyMesh& mesh);
 
@@ -119,5 +121,19 @@ private:
 
 	double point2PlaneDist(const Eigen::Vector3d& point, const Eigen::Vector3d& centroid, const Eigen::Vector3d& normal);
 	double EvaluateCost(const Eigen::Vector3d& centroid, const Eigen::Vector3d& normal, const std::vector<uint>& meshletid, uint faceid, const MyMesh& mesh);
+
+	std::vector<uint> IsNodeBound(const std::vector<uint>& facetomeshlet, const MyMesh& mesh, int triid,int nodeid,uint& vertoerase);
+
+	bool SimpleInsert(const std::vector<uint>& boundnodes, uint triid, const MyMesh& mesh,
+		std::vector<uint>& facetomeshlet,uint rawnode,uint vertoerase);
+
+
+	bool ComplexInsert(uint nodeinserted, uint triid, const MyMesh& mesh,
+		std::vector<uint>& facetomeshlet, uint rawnode, uint vertoerase,std::unordered_set<uint> nodeoutsets);
+
+	uint getVerCommon(const MyMesh& mesh, std::vector<uint> tris);
+
+	void TestMeshlet(uint meshletid,const MyMesh& mesh);
+
 };
 

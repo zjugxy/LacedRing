@@ -177,6 +177,8 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh,Meshlets 
 
 		//可以在这里做一个模拟退火？
 		// cut sharp triangles
+
+
 		endTime = std::chrono::steady_clock::now();
 		std::cout << "first cluster down" << std::endl;
 		duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -214,9 +216,24 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh,Meshlets 
 		}
 
 	}
-	
-	startTime = std::chrono::steady_clock::now();
 
+
+	int minmesh = 0;
+	for (auto& singlemesh : mymeshlets) {
+
+		std::cout << singlemesh.faces.size() <<"   "<<singlemesh.vertices.size()<< std::endl;
+		if (singlemesh.faces.size() < maxtris / 2)
+			minmesh++;
+	}
+	std::cout << "minmesh num is " << minmesh << std::endl;
+	std::cout << "total meshlets is " << mymeshlets.size() << std::endl;
+	
+	//
+	DeleteSmallMesh(mesh);
+
+
+	startTime = std::chrono::steady_clock::now();
+	
 	TryShapeHeal(mesh);
 
 	std::cout << "shape heal down" << std::endl;
@@ -489,6 +506,117 @@ void NewCluster::GenerateEwire(const MyMesh& mesh) {
 	//建立global ewire 和 meshlet ewireid map
 
 	BuildGloEwires(buildsets);
+
+
+}
+
+void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
+{
+	sort(mymeshlets.begin(), mymeshlets.end(), [](const Meshlet_built& mesh1, const Meshlet_built& mesh2) {
+		return mesh1.faces.size() < mesh2.faces.size();
+	});
+	for (auto& meshlet : mymeshlets)std::cout << meshlet.faces.size() << std::endl;
+
+
+
+	std::vector<uint> facetomeshlet(nfaces);
+	for (int i = 0; i < mymeshlets.size(); ++i) {
+		for (auto& f : mymeshlets[i].faces)
+			facetomeshlet[f] = i;
+	}
+
+	
+
+
+	for (int i = 0; i < mymeshlets.size(); ++i) {
+
+		std::cout << "cut meshlet " << i << std::endl;
+
+		if (mymeshlets[i].vertices.size() > maxv / 3)break;
+		//
+		while (!mymeshlets[i].faces.empty()) {
+			for (auto& singleface : mymeshlets[i].faces) {
+
+				uint vertoerase = 0xffffffff;
+				auto boundnodes = IsNodeBound(facetomeshlet, mesh, singleface, i,vertoerase);
+				if (boundnodes.empty())
+					continue;
+				else {
+					//Try insert Tri singleface --> boundnode[0]
+
+					//simple test 
+					//for (auto node : boundnodes)
+					//	TestMeshlet(node, mesh);
+
+					bool result = SimpleInsert(boundnodes, singleface, mesh, facetomeshlet,i,vertoerase);
+					if (result == false) {
+						std::unordered_set<uint> tempset;
+						result = ComplexInsert(boundnodes[0], singleface, mesh, facetomeshlet,i,vertoerase,tempset);
+
+					}
+
+					//for (auto node : boundnodes)
+					//	TestMeshlet(node, mesh);
+
+					break;
+
+				}
+				if (mymeshlets[i].faces.size() == 0)break;
+			}
+		
+
+		
+		}
+		mymeshlets[i].faces.clear();
+		mymeshlets[i].vertices.clear();
+	}
+
+	int zerocnt = 0;
+	for (auto& meshlet : mymeshlets) {
+		std::cout << meshlet.faces.size() << std::endl;
+		if (meshlet.faces.size() == 0)
+			zerocnt++;
+	}
+
+	while (zerocnt != 0) {
+		int idx = 0;
+		for(int i=0;i<mymeshlets.size();++i)
+			if (mymeshlets[i].faces.size() != 0) {
+				idx = i;
+				break;
+			}
+		mymeshlets.erase(mymeshlets.begin(), mymeshlets.begin() + idx);
+		zerocnt -= idx;
+
+	}
+
+
+
+	for (auto meshlet : mymeshlets) {
+		if (meshlet.faces.empty())continue;
+		int facenum = meshlet.faces.size();
+		uint startf = *meshlet.faces.begin();
+
+		std::unordered_set<uint> tempset;
+		std::deque<uint> trilist;
+		trilist.push_back(startf);
+		tempset.insert(startf);
+
+		while (!trilist.empty()) {
+			auto f = trilist.front();
+			trilist.pop_front();
+			auto fh = mesh.face_handle(f);
+
+			for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit)
+				if (meshlet.faces.find(cffit->idx()) != meshlet.faces.end())
+					if (tempset.find(cffit->idx()) == tempset.end()) {
+						tempset.insert(cffit->idx());
+						trilist.push_back(cffit->idx());
+					}
+		}
+		assert(tempset.size() == meshlet.faces.size());
+	}
+
 
 
 }
@@ -1311,3 +1439,302 @@ double NewCluster::EvaluateCost(const Eigen::Vector3d& centroid, const Eigen::Ve
 	//cost越高 该faceid的毛刺程度，偏离程度越大
 	return cost;
 }
+
+std::vector<uint> NewCluster::IsNodeBound(const std::vector<uint>& facetomeshlet, const MyMesh& mesh, int triid, int nodeid,uint& vertoerase)
+{
+	std::vector<uint> nextnodes;
+	std::vector<uint> adjtris;
+	auto fh = mesh.face_handle(triid);
+	for (auto it = mesh.cff_iter(fh); it.is_valid(); ++it) {
+		auto boundtri = it->idx();
+		auto nextnodeid = facetomeshlet[it->idx()];
+		if (nextnodeid != nodeid) {
+			nextnodes.push_back(nextnodeid);
+			adjtris.push_back(it->idx());
+		}
+	}
+
+	if (nextnodes.size() == 3)return nextnodes;
+	if (nextnodes.size() == 1)return nextnodes;
+	if (nextnodes.size() == 0)return nextnodes;
+	vertoerase = getVerCommon(mesh, adjtris);
+
+	if (nextnodes[0] == nextnodes[1])
+		nextnodes.pop_back();
+	return nextnodes;
+}
+
+bool NewCluster::SimpleInsert(const std::vector<uint>& boundnodes, uint triid, const MyMesh& mesh, std::vector<uint>& facetomeshlet,
+	uint rawnode, uint vertoerase)
+{
+	auto fh = mesh.face_handle(triid);
+	std::vector<uint> pnts;
+	for (auto it = mesh.cfv_iter(fh); it.is_valid(); ++it)
+		pnts.push_back(it->idx());
+
+	for (auto& node : boundnodes) {
+		int remainspacever = maxv - mymeshlets[node].vertices.size();
+		int remainspaceface = maxf - mymeshlets[node].faces.size();
+		
+		if (remainspaceface <= 1)continue;
+		
+		std::vector<uint> vertoinsert;
+		for (auto ver : pnts)
+			if (mymeshlets[node].vertices.find(ver) == mymeshlets[node].vertices.end())
+				vertoinsert.push_back(ver);
+
+		if (remainspacever < vertoinsert.size())continue;
+
+		for (auto ver : vertoinsert)
+			mymeshlets[node].vertices.insert(ver);
+		mymeshlets[node].faces.insert(triid);
+		facetomeshlet[triid] = node;
+
+		mymeshlets[rawnode].faces.erase(triid);
+		if(vertoerase!=0xffffffff)
+			mymeshlets[rawnode].vertices.erase(vertoerase);
+		assert(mymeshlets[node].faces.size() < maxf);
+		assert(mymeshlets[node].vertices.size() <= maxv);
+		return true;
+
+	}
+
+
+	return false;
+}
+
+bool NewCluster::ComplexInsert(uint nodeinserted, uint triid, const MyMesh& mesh, std::vector<uint>& facetomeshlet, uint rawnode, uint vertoerase,
+	std::unordered_set<uint> nodeoutsets)
+{
+	//1 erase并插入
+	mymeshlets[nodeinserted].faces.insert(triid);
+	auto tempfh = mesh.face_handle(triid);
+	for (auto cfvit = mesh.cfv_iter(tempfh); cfvit.is_valid(); ++cfvit)
+		mymeshlets[nodeinserted].vertices.insert(cfvit->idx());
+
+	mymeshlets[rawnode].faces.erase(triid);
+	if (vertoerase != 0xffffffff)
+		mymeshlets[rawnode].vertices.erase(vertoerase);
+
+	facetomeshlet[triid] = nodeinserted;
+
+	assert((mymeshlets[nodeinserted].faces.size() >= maxf) || (mymeshlets[nodeinserted].vertices.size() > maxv));
+	
+	//找 nodeinsert的边界三角形
+	nodeoutsets.insert(rawnode);
+	//nodeoutsets.insert(nodeinserted);
+
+	std::vector<uint> oneboundtris;
+	std::vector<uint> twoboundtris;
+
+	//先尝试做simple insert如果成功了 判断是否符合 maxf, maxv,符合则返回不符合则继续
+	
+	for (auto f : mymeshlets[nodeinserted].faces) {
+		auto fh = mesh.face_handle(f);
+
+		std::vector<uint> boundnodes;
+		std::vector<uint> boundtris;
+		for (auto cffiv = mesh.cff_iter(fh); cffiv.is_valid(); ++cffiv) {
+			if (facetomeshlet[cffiv->idx()] == rawnode) {
+				boundnodes.clear(); break;
+			}
+			else if(facetomeshlet[cffiv->idx()]==nodeinserted)
+			{ 
+				continue;
+			}
+			else {
+				boundnodes.push_back(facetomeshlet[cffiv->idx()]);
+				boundtris.push_back(cffiv->idx());
+			}
+		}
+		if (boundnodes.size()==2)
+		{
+			uint vertoerase = getVerCommon(mesh, boundtris);
+			bool result = SimpleInsert(boundnodes, f, mesh, facetomeshlet, nodeinserted, vertoerase);
+			if (result) {
+				assert(mymeshlets[nodeinserted].faces.size() < maxf);
+				assert(mymeshlets[nodeinserted].vertices.size() <= maxv);
+				return true;
+			}
+		}
+
+
+	}
+
+
+	std::cout << " special node insert start" << nodeinserted << std::endl;
+
+	//做一个撕裂者
+
+	//for (auto face : mymeshlets[nodeinserted].faces) {
+	//	auto fh = mesh.face_handle(face);
+
+	//	std::vector<uint> boundnodes;
+	//	std::vector<uint> boundtris;
+
+	//	for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+	//		auto meshletid = facetomeshlet[cffit->idx()];
+	//		//与之前的要缩小的meshlet相接的边界三角形直接不考虑
+	//		if (nodeoutsets.find(meshletid) != nodeoutsets.end()) {
+	//			boundnodes.clear(); break;
+	//		}
+	//		if (meshletid != nodeinserted) {
+	//			boundnodes.push_back(meshletid);
+	//			boundtris.push_back(cffit->idx());
+	//		}
+	//	}
+
+	//	//try simple insert
+	//	if (boundnodes.size() == 0)continue;
+	//	uint vertoerase = getVerCommon(mesh, boundtris);
+	//	bool result = ComplexInsert(boundnodes[0], face, mesh, facetomeshlet, nodeinserted, vertoerase,nodeoutsets);
+
+	//	if ((mymeshlets[nodeinserted].faces.size() < maxf) && mymeshlets[nodeinserted].vertices.size() <= maxv)
+	//		return true;
+	//}
+
+	
+	std::cout <<"原先meshlet的face num "<< mymeshlets[nodeinserted].faces.size() << std::endl;
+
+	std::unordered_set<uint> newfaceset;
+	std::deque<uint> mytrilist;
+	mytrilist.push_back(triid);
+	newfaceset.insert(triid);
+	while (newfaceset.size() < maxf / 3) {
+		auto temp = mytrilist.front();
+		mytrilist.pop_front();
+
+		auto trih = mesh.face_handle(temp);
+
+		for (auto cffit = mesh.cff_iter(trih); cffit.is_valid(); ++cffit) {
+			if (mymeshlets[nodeinserted].faces.find(cffit->idx()) != mymeshlets[nodeinserted].faces.end()) {
+				if (newfaceset.find(cffit->idx()) == newfaceset.end()) {
+					newfaceset.insert(cffit->idx());
+					mytrilist.push_back(cffit->idx());
+				}
+			}
+		}
+	}
+
+	std::vector<std::unordered_set<uint>> triangleset;
+	//triangleset.push_back(newfaceset);
+	for (auto temp : newfaceset)
+		mymeshlets[nodeinserted].faces.erase(temp);
+
+	while (!mymeshlets[nodeinserted].faces.empty())
+	{
+		std::unordered_set<uint> tempset;
+		mytrilist.clear();
+
+		auto starttri = *mymeshlets[nodeinserted].faces.begin();
+		mymeshlets[nodeinserted].faces.erase(starttri);
+		tempset.insert(starttri);
+		mytrilist.push_back(starttri);
+
+		while (!mytrilist.empty()) {
+			auto temp = mytrilist.front();
+			mytrilist.pop_front();
+
+			auto trih = mesh.face_handle(temp);
+
+			for (auto cffit = mesh.cff_iter(trih); cffit.is_valid(); ++cffit) {
+				if (mymeshlets[nodeinserted].faces.find(cffit->idx()) != mymeshlets[nodeinserted].faces.end()) {
+						tempset.insert(cffit->idx());
+						mytrilist.push_back(cffit->idx());
+						mymeshlets[nodeinserted].faces.erase(cffit->idx());
+				}
+			}
+		}
+		triangleset.push_back(tempset);
+	}
+	//从大到小排列
+	std::sort(triangleset.begin(), triangleset.end(), [](const std::unordered_set<uint>& set1, const std::unordered_set<uint>& set2) {
+		return set1.size() > set2.size();
+	});
+	for (uint idx = 1; idx < triangleset.size(); idx++) {
+		for (auto f : triangleset[idx])
+			newfaceset.insert(f);
+	}
+
+	mymeshlets[nodeinserted].faces.clear();
+	mymeshlets[nodeinserted].vertices.clear();
+
+	mymeshlets[nodeinserted].faces = newfaceset;
+	for (auto f : newfaceset) {
+		facetomeshlet[f] = nodeinserted;
+		auto temphandle = mesh.face_handle(f);
+		for (auto cfvit = mesh.cfv_iter(temphandle); cfvit.is_valid(); cfvit++)
+			mymeshlets[nodeinserted].vertices.insert(cfvit->idx());
+	}
+
+	Meshlet_built newmeshlet;
+	mymeshlets.push_back(newmeshlet);
+	mymeshlets[mymeshlets.size() - 1].faces = triangleset[0];
+	for (auto f : triangleset[0]) {
+		auto temphandle = mesh.face_handle(f);
+		facetomeshlet[f] = mymeshlets.size() - 1;
+		for (auto cfvit = mesh.cfv_iter(temphandle); cfvit.is_valid(); cfvit++)
+			mymeshlets[mymeshlets.size()-1].vertices.insert(cfvit->idx());
+	}
+
+	std::cout << "分割meshlet的face num " << mymeshlets[nodeinserted].faces.size() <<"  "<<triangleset[0].size() << std::endl;
+
+	return true;
+
+}
+
+uint NewCluster::getVerCommon(const MyMesh& mesh, std::vector<uint> tris)
+{
+	if(tris.size()==1)
+		return 0xFFFFFFFF;
+	else if (tris.size() == 2) {
+		auto fh = mesh.face_handle(tris[0]);
+		std::unordered_set<uint> pnts;
+		for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); ++cfvit) {
+			pnts.insert(cfvit->idx());
+		}
+		fh = mesh.face_handle(tris[1]);
+		for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); ++cfvit) {
+			if (pnts.find(cfvit->idx()) != pnts.end())
+				return cfvit->idx();
+		}
+	}
+	else {
+		std::cout << "error may occur in get ver common" << std::endl;
+		return  0xFFFFFFFF;
+	}
+}
+
+void NewCluster::TestMeshlet(uint meshletid,const MyMesh& mesh)
+{
+	auto& meshlet = mymeshlets[meshletid];
+	int facenum = meshlet.faces.size();
+	uint startf = *meshlet.faces.begin();
+
+	std::unordered_set<uint> tempset;
+	std::deque<uint> trilist;
+	trilist.push_back(startf);
+	tempset.insert(startf);
+
+	while (!trilist.empty()) {
+		auto f = trilist.front();
+		trilist.pop_front();
+		auto fh = mesh.face_handle(f);
+
+		for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit)
+			if (meshlet.faces.find(cffit->idx()) != meshlet.faces.end())
+				if (tempset.find(cffit->idx()) == tempset.end()) {
+					tempset.insert(cffit->idx());
+					trilist.push_back(cffit->idx());
+				}
+	}
+
+	if (tempset.size() != meshlet.faces.size()) {
+		for (auto f : meshlet.faces)
+			if (tempset.find(f) == tempset.end())
+				std::cout << "error diconnect tri "<<f << std::endl;
+	}
+
+}
+
+

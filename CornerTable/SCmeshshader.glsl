@@ -45,7 +45,7 @@ void main(){
 
 	//每个线程处理顶点
 
-	if((mi==81161)){
+	if((mi>=0)){
 		uint add = threadid;
 		while(add<meshlet.vertex_cnt){
 			uint gloveridx = meshlet.vertex_begin+add;
