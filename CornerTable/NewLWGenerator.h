@@ -78,6 +78,8 @@ struct PackGEO {
 	bool isXPlatForm = false;
 	std::vector<vec3> nopackgeo;
 
+
+	bool NeedExtraPnt = false;
 	std::vector<uint> extraVertex;//当lace wire的个数 >0 但是又<3时，需要添加相邻的点
 	//重新来构建
 
@@ -193,5 +195,10 @@ private:
 
 	Eigen::Vector3d ReadData(const std::vector<uint>& geobits, uint startidx, uint xnum, uint ynum, uint znum);
 	float ReadFloat(const std::vector<uint>& geobits, uint startidx, uint num);
+
+	void PackExtraPnts(PackGEO& tempgeo, const MyMesh& mesh,const std::vector<uint>& vertices);
+
+
+	void ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequanmatrix, Eigen::Vector3d& tranvec);
 };
 
