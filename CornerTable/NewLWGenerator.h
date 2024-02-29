@@ -78,6 +78,11 @@ struct PackGEO {
 	bool isXPlatForm = false;
 	std::vector<vec3> nopackgeo;
 
+	std::vector<uint> extraVertex;//当lace wire的个数 >0 但是又<3时，需要添加相邻的点
+	//重新来构建
+
+
+
 	Eigen::Vector3d euler;
 	Eigen::Vector3d translation;
 	Eigen::Vector3d scaleelem;
@@ -89,6 +94,8 @@ struct PackGEO {
 	uchar xnum, ynum, znum;
 	std::vector<Eigen::Vector3d> dataunit;
 	std::vector<Eigen::Vector3d> datatocompress;
+
+	std::vector<uint> geobitflow;
 };
 
 
@@ -141,7 +148,7 @@ private:
 	void PushAtFront(std::vector<std::unordered_set<uint>>& lpnts, const MyMesh& mesh, std::deque<uint>& singlewire, std::unordered_set<uint>& pntstoremove);
 	void PackSimpleLaceWire(const MyMesh& mesh);
 
-	void VertexQuantization(const MyMesh& mesh);
+
 
 	void fitPlane(const MyMesh&mesh,const std::vector<uint>&verset, Eigen::Vector3d& centroid, Eigen::Vector3d& normal);
 	Box2d getYZAxis(const MyMesh& mesh, const std::vector<uint>& verset, Eigen::Vector3d xaxis, Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis, float anglediff,Eigen::Vector3d centroid);
@@ -176,5 +183,15 @@ private:
 
 
 	Eigen::Vector3d cutfloatByBit(Eigen::Vector3d rawvalue, uint xnum, uint ynum, uint znum);
+
+	void GEObitflowPack();
+
+	void InsertGeoValue(std::vector<uint>& bitflow, uint startidx, uint length, float rawvalue);
+
+	void printBits(uint32_t value);
+
+
+	Eigen::Vector3d ReadData(const std::vector<uint>& geobits, uint startidx, uint xnum, uint ynum, uint znum);
+	float ReadFloat(const std::vector<uint>& geobits, uint startidx, uint num);
 };
 

@@ -58,7 +58,7 @@ int main()
         meshlets = nclu.oldmeshlets;
 
 
-        int flag = 0;
+        int flag = 1;
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
@@ -99,7 +99,7 @@ int main()
             //myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
             myview.set(&myscene);
-            myview.setMeshshader("PointSimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
+            myview.setMeshshader("SimpleLaceWiremeshshader.glsl", "TSfragshader.glsl");
             myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
 
             while (!glfwWindowShouldClose(myview.MYwindow()))
@@ -114,7 +114,7 @@ int main()
             glfwTerminate();
             exit(EXIT_SUCCESS);
         }
-        else {
+        else if(flag == 2){
             NewLWGenerator nlwgen(nclu);
             nlwgen.FUNC(mesh);
             myscene.LoadGPULW(nlwgen);

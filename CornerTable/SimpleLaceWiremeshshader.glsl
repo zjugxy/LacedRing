@@ -47,7 +47,7 @@ void main(){
 	Simple_meshlet meshlet = meshlets[mi];
 
 	//每个线程处理顶点
-	if(mi==1){
+	if(mi>=0){
 
 		uint add = threadid;
 		while(add<meshlet.vertex_cnt){

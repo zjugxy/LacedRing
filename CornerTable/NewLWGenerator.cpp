@@ -38,10 +38,13 @@ void NewLWGenerator::FUNC(const MyMesh& mesh)
 {
 	InternalWireGenerator(mesh);
 	LeftRightGenertor(mesh);
-	PackSimpleLaceWire(mesh);
 
 	//VertexQuantization(mesh);
 	NewVertexQuantization(mesh);
+	GEObitflowPack();
+
+	PackSimpleLaceWire(mesh);
+
 	PackGPULW(mesh);
 }
 
@@ -376,36 +379,110 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 		//	geoinfo[vertexbegin + elem.second] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
 		//}
 
-		uint vcnt = 0;
-		for (auto& ver : meshlet.InternalLW.vertex) {
-			if (ver == EMPTYWIRE)
-				break;
-			auto vh = mesh.vertex_handle(ver);
-			auto pnt = mesh.point(vh);
-			geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
-			vcnt++;
-		}
 
-		for (uint eid = 0; eid < meshlet.ewireidx.size(); ++eid) {
-			auto& ewire = gloEwires[meshlet.ewireidx[eid]];
-			if (meshlet.reverse[eid] == false) {
-				for (uint i = 0; i < ewire.vertex.size() - 1; ++i) {
-					auto vh = mesh.vertex_handle(ewire.vertex[i]);
-					auto pnt = mesh.point(vh);
-					geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
-					vcnt++;
+		uint vcnt = 0;
+
+		bool usecompressgeo = true;
+		//if (usecompressgeo) {
+
+			if (usecompressgeo) {
+				auto& tempgeo = packinter[mid];
+				if (tempgeo.needtransform == false) {
+					for (int i = 0; i < tempgeo.geobitflow.size(); i += 3) {
+						float x = *reinterpret_cast<float*>(&tempgeo.geobitflow[i]);
+						float y = *reinterpret_cast<float*>(&tempgeo.geobitflow[i + 1]);
+						float z = *reinterpret_cast<float*>(&tempgeo.geobitflow[i + 2]);
+						geoinfo[vertexbegin + vcnt] = vec4{ x,y,z,1.0 };
+						vcnt++;
+					}
+				}
+				else {
+
+					Eigen::Vector3d eulerXYZ{
+						float(tempgeo.rotatx) / 255.0 * TWOPI,
+						float(tempgeo.rotaty) / 255.0 * TWOPI,
+						float(tempgeo.rotatz) / 255.0 * TWOPI
+					};
+					Eigen::AngleAxisd rotationX(eulerXYZ[0], Eigen::Vector3d::UnitX());
+					Eigen::AngleAxisd rotationY(eulerXYZ[1], Eigen::Vector3d::UnitY());
+					Eigen::AngleAxisd rotationZ(eulerXYZ[2], Eigen::Vector3d::UnitZ());
+					//quantize
+					Eigen::Matrix3d rotationMatrix = (rotationX.matrix() * rotationY.matrix() * rotationZ.matrix());
+					Eigen::Vector3d tranvec = {
+						MeshTransBox.minx + (tempgeo.translatex / 255.0) * (MeshTransBox.maxx - MeshTransBox.minx),
+						MeshTransBox.miny + (tempgeo.translatey / 255.0) * (MeshTransBox.maxy - MeshTransBox.miny),
+						MeshTransBox.minz + (tempgeo.translatez / 255.0) * (MeshTransBox.maxz - MeshTransBox.minz)
+					};
+					float descalex = MeshScaleBox.minx * std::pow(MeshScaleBox.maxx / MeshScaleBox.minx, tempgeo.scalex / 255.0f);
+					float descaley = MeshScaleBox.miny * std::pow(MeshScaleBox.maxy / MeshScaleBox.miny, tempgeo.scaley / 255.0f);
+					float descalez = MeshScaleBox.minz * std::pow(MeshScaleBox.maxz / MeshScaleBox.minz, tempgeo.scalez / 255.0f);
+
+					Eigen::DiagonalMatrix<double, 3> scalema;
+					scalema.diagonal() << descalex, descaley, descalez;
+					Eigen::MatrixXd dequanmatrix = rotationMatrix * scalema;
+
+					uint pntlength = tempgeo.xnum + tempgeo.ynum + tempgeo.znum;
+
+					for (int i = 0; i < targets[mid].InternalLW.vertex.size(); ++i) {
+						Eigen::Vector3d  temppnt = ReadData(tempgeo.geobitflow, 12 * 8 + pntlength * i, tempgeo.xnum, tempgeo.ynum, tempgeo.znum);
+						auto pnt = dequanmatrix * temppnt + tranvec;
+						auto cmpvalue = mesh.point(mesh.vertex_handle(targets[mid].InternalLW.vertex[i]));
+						Eigen::Vector3d cmpvec{ cmpvalue[0],cmpvalue[1],cmpvalue[2] };
+						if ((cmpvec - pnt).norm() > 0.01)
+							std::cout << "debug" << std::endl;
+
+						std::cout << (cmpvec - pnt).norm() << std::endl;
+
+						std::cout << (temppnt - tempgeo.datatocompress[i]).norm() << std::endl;
+						geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
+						vcnt++;
+					}
 				}
 			}
+
+			//for (uint eid = 0; eid < meshlet.ewireidx.size(); ++eid) {
+			//	auto& ewiregeo = packexter[meshlet.ewireidx[eid]];
+
+
+
+			//}
+
+
+		//}
+		//else {
 			else {
-				for (uint i = ewire.vertex.size() - 1; i !=0 ; --i) {
-					auto vh = mesh.vertex_handle(ewire.vertex[i]);
+				for (auto& ver : meshlet.InternalLW.vertex) {
+					if (ver == EMPTYWIRE)
+						break;
+					auto vh = mesh.vertex_handle(ver);
 					auto pnt = mesh.point(vh);
 					geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
 					vcnt++;
 				}
 			}
-		}
-		assert(vcnt == vidxmap.size());
+
+				for (uint eid = 0; eid < meshlet.ewireidx.size(); ++eid) {
+					auto& ewire = gloEwires[meshlet.ewireidx[eid]];
+					if (meshlet.reverse[eid] == false) {
+						for (uint i = 0; i < ewire.vertex.size() - 1; ++i) {
+							auto vh = mesh.vertex_handle(ewire.vertex[i]);
+							auto pnt = mesh.point(vh);
+							geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
+							vcnt++;
+						}
+					}
+					else {
+						for (uint i = ewire.vertex.size() - 1; i != 0; --i) {
+							auto vh = mesh.vertex_handle(ewire.vertex[i]);
+							auto pnt = mesh.point(vh);
+							geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
+							vcnt++;
+						}
+					}
+				}
+				assert(vcnt == vidxmap.size());
+			
+		//}
 
 
 
@@ -615,7 +692,7 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 		//  z - axis
 
 		//refresh meshtranbox ,meshscalebox
-		NewSimpleCheck(tempgeo, mesh, ewire.vertex);
+		//NewSimpleCheck(tempgeo, mesh, ewire.vertex);
 
 		if (firstadd) {
 			MeshTransBox = UnitBox{ float(newcentroid[0]),float(newcentroid[1]),float(newcentroid[2])
@@ -656,11 +733,13 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 		Eigen::Vector3d eulerXYZ = rotationMatrix.eulerAngles(0, 1, 2);
 		tempgeo.euler = eulerXYZ;
 
-		NewSimpleCheck(tempgeo, mesh, ewire.vertex);
+		//NewSimpleCheck(tempgeo, mesh, ewire.vertex);
 
 		MeshTransBox.refresh(newcentroid[0], newcentroid[1], newcentroid[2]);
 	}
 	
+
+	//使用8-bit将 eulerxyz --> 映射到对应的 0-2PI值域
 	UcharRadGen();
 
 	//for (uint eid = 0; eid < gloEwires.size(); ++eid)
@@ -677,6 +756,9 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 
 	BitSortGen(30,2);
 	VertexBitGen(mesh,0.001);
+
+	//pack into bit flow
+
 
 	return;
 }
@@ -1270,6 +1352,7 @@ void NewLWGenerator::FinalScaleGen(const MyMesh& mesh)
 		xvalues.push_back(tempx*GREATERSCALEELEM); yvalues.push_back(tempy * GREATERSCALEELEM); zvalues.push_back(tempz * GREATERSCALEELEM);
 		//std::cout << "ewire " << eid << " " << tempx << " " << tempy << " " << tempz << std::endl;
 
+		//如何 scale elem过于小的话使用指数表示有一定精度问题
 		assert((tempx > SCALEXELEMMIN) && (tempy > SCALEXELEMMIN) && (tempz > SCALEXELEMMIN));
 	}
 
@@ -1451,19 +1534,140 @@ void NewLWGenerator::LimitEigen(Eigen::Vector3d& vec)
 }
 
 // float*3 在该精度之下具体会变成什么值
+// -1.0 --> 1.0  map to  0 --> 2^num-1
+// 0.0 --> 2.0 map to  0 --> 2^num-1
+
+
+
 Eigen::Vector3d NewLWGenerator::cutfloatByBit(Eigen::Vector3d rawvalue, uint xnum, uint ynum, uint znum)
 {
 	uint xhigh = (1 << xnum) - 1;
 	uint yhigh = (1 << ynum) - 1;
 	uint zhigh = (1 << znum) - 1;
 
-	float x = std::round(rawvalue.x() * xhigh);
-	float y = std::round(rawvalue.y() * yhigh);
-	float z = std::round(rawvalue.z() * zhigh);
+	float x = std::round((rawvalue.x()+1)/2.0 * xhigh);//value 对应uint值
+	float y = std::round((rawvalue.y()+1)/2.0 * yhigh);
+	float z = std::round((rawvalue.z()+1)/2.0 * zhigh);
 	auto result = Eigen::Vector3d{
-		x/xhigh,y/yhigh,z/zhigh
+		x/xhigh*2.0 -1.0,y/yhigh*2.0 -1.0,z/zhigh*2.0-1.0
 	};
 	return result;
+}
+
+void NewLWGenerator::GEObitflowPack()
+{
+	for (uint eid = 0; eid < packexter.size(); ++eid) {
+		auto& tempgeo = packexter[eid];
+		
+		//<3
+		if (tempgeo.needtransform == false) {
+			assert(gloEwires[eid].vertex.size() < 3);
+
+			for (auto pnt : tempgeo.nopackgeo) {
+				uint uintvalue = *reinterpret_cast<uint*>(&pnt.x);
+				tempgeo.geobitflow.push_back(uintvalue);
+				uintvalue = *reinterpret_cast<uint*>(&pnt.y);
+				tempgeo.geobitflow.push_back(uintvalue);
+				uintvalue = *reinterpret_cast<uint*>(&pnt.z);
+				tempgeo.geobitflow.push_back(uintvalue);
+			}
+		}
+		else {
+			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.rotatx, tempgeo.rotaty, tempgeo.rotatz, tempgeo.translatex));
+			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.translatey, tempgeo.translatez, tempgeo.scalex, tempgeo.scaley));
+			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.scalez, tempgeo.xnum, tempgeo.ynum, tempgeo.znum));
+
+			uint xnum = tempgeo.xnum,ynum = tempgeo.ynum,znum = tempgeo.znum;
+			uint pntlength = xnum + ynum + znum;
+			tempgeo.geobitflow.resize(3 + (31 + pntlength * tempgeo.datatocompress.size()) / 32);
+			uint startbitidx = 3 * 32;
+
+			for (auto pnt : tempgeo.datatocompress) {
+				InsertGeoValue(tempgeo.geobitflow, startbitidx, xnum, pnt.x());
+				InsertGeoValue(tempgeo.geobitflow, startbitidx+xnum, ynum, pnt.y());
+				InsertGeoValue(tempgeo.geobitflow, startbitidx+xnum+ynum, znum, pnt.z());
+				startbitidx += pntlength;
+			}
+		}
+	
+	
+	
+	}
+
+	for (uint iid = 0; iid < packinter.size(); ++iid) {
+		auto& tempgeo = packinter[iid];
+
+		//<3
+		if (tempgeo.needtransform == false) {
+			assert(targets[iid].InternalLW.vertex.size() < 3);
+
+			for (auto pnt : tempgeo.nopackgeo) {
+				uint uintvalue = *reinterpret_cast<uint*>(&pnt.x);
+				tempgeo.geobitflow.push_back(uintvalue);
+				uintvalue = *reinterpret_cast<uint*>(&pnt.y);
+				tempgeo.geobitflow.push_back(uintvalue);
+				uintvalue = *reinterpret_cast<uint*>(&pnt.z);
+				tempgeo.geobitflow.push_back(uintvalue);
+			}
+		}
+		else {
+			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.rotatx, tempgeo.rotaty, tempgeo.rotatz, tempgeo.translatex));
+			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.translatey, tempgeo.translatez, tempgeo.scalex, tempgeo.scaley));
+			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.scalez, tempgeo.xnum, tempgeo.ynum, tempgeo.znum));
+
+			uint xnum = tempgeo.xnum, ynum = tempgeo.ynum, znum = tempgeo.znum;
+			uint pntlength = xnum + ynum + znum;
+			tempgeo.geobitflow.resize(3 + (31 + pntlength * tempgeo.datatocompress.size()) / 32);
+			uint startbitidx = 3 * 32;
+
+			for (auto pnt : tempgeo.datatocompress) {
+				InsertGeoValue(tempgeo.geobitflow, startbitidx, xnum, pnt.x());
+				InsertGeoValue(tempgeo.geobitflow, startbitidx + xnum, ynum, pnt.y());
+				InsertGeoValue(tempgeo.geobitflow, startbitidx + xnum + ynum, znum, pnt.z());
+				startbitidx += pntlength;
+			}
+		}
+
+
+
+	}
+
+}
+
+void NewLWGenerator::InsertGeoValue(std::vector<uint>& bitflow, uint startidx, uint length, float rawvalue)
+{
+	uint highvalue = (1 << length) - 1;
+	assert((rawvalue >= -1.0) && (rawvalue <= 1.0));
+	uint cutvalue = std::round((rawvalue+1.0)/2.0 * highvalue);
+	// startidx --> startidx+length
+	uint endidx = startidx + length;
+
+	//[startidx,endidx)
+	//从低位到高位开始覆写
+	if ((endidx-1) / 32 == startidx / 32) {
+		uint& value = bitflow[startidx / 32];
+		uint offset = startidx % 32;
+		//printBits(value);
+		//printBits(cutvalue);
+		value = value | (cutvalue << offset);
+		//printBits(value);
+	}
+	else {
+		uint offset = startidx % 32;
+		uint firstpart = cutvalue << offset;
+		uint secondpart = cutvalue >> (32 - offset);
+		//std::cout << "special insert test" << std::endl;
+		//printBits(firstpart);
+		//printBits(secondpart);
+		//printBits(bitflow[startidx / 32]);
+		bitflow[startidx / 32] = bitflow[startidx / 32] | firstpart;
+		bitflow[startidx / 32 + 1] = bitflow[startidx / 32 + 1] | secondpart;
+
+		//printBits(bitflow[startidx / 32]);
+		//printBits(bitflow[startidx / 32+1]);
+
+	}
+
 }
 
 
@@ -1614,4 +1818,61 @@ void UnitBox::refresh(float xvalue, float yvalue, float zvalue)
 	if (zvalue > maxz)
 		maxz = zvalue;
 	return;
+}
+
+void NewLWGenerator::printBits(uint32_t value) {
+	uint32_t mask = 1 << 31;  // 从最高位开始
+
+	for (int i = 0; i < 32; i++) {
+		bool bit = (value & mask) != 0;
+		std::cout << (bit ? "1" : "0");
+		mask >>= 1;
+	}
+
+	std::cout << std::endl;
+}
+
+Eigen::Vector3d NewLWGenerator::ReadData(const std::vector<uint>& geobits, uint startidx, uint xnum, uint ynum, uint znum)
+{
+	float x = ReadFloat(geobits, startidx, xnum);
+	float y = ReadFloat(geobits, startidx+xnum, ynum);
+	float z = ReadFloat(geobits, startidx+xnum+ynum, znum);
+
+	return Eigen::Vector3d{x,y,z};
+}
+
+float NewLWGenerator::ReadFloat(const std::vector<uint>& geobits, uint startidx, uint num)
+{
+	int start = startidx / 32;
+	int end = (startidx + num -1) / 32;
+
+	if (start == end) {
+		uint value = geobits[start];
+		uint offset = startidx % 32;
+		uint mask = (1 << (num )) - 1;
+		value = value >> offset;
+		value = value & mask;
+
+		uint high = (1 << num) - 1;
+		float ret = float(value) / high * 2.0 - 1.0;
+		return ret;
+	}
+	else {
+		uint offset = startidx % 32;
+		uint highmasknum = 32 - offset;
+		uint lowmasknum = num - highmasknum;
+		uint part1 = geobits[start] >> offset;
+
+		uint lowmask = (1 << (lowmasknum )) - 1;
+		uint part2 = geobits[start + 1] & lowmask;
+		uint value = part1 + (part2 << highmasknum);
+
+		uint high = (1 << num) - 1;
+		float ret = float(value) / high * 2.0 - 1.0;
+
+		if (abs(ret) > 2.0)
+			std::cout << "debug" << std::endl;
+		return ret;
+	}
+
 }
