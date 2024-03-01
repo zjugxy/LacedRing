@@ -553,6 +553,53 @@ namespace glfwviewer {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     }
 
+    void Scene::LoadFinalLaceWire(NewLWGenerator& nlwn)
+    {
+        finalgpulwobj.Desinfo = &nlwn.Desinfo;
+        finalgpulwobj.DesLoc = &nlwn.DesLoc;
+        finalgpulwobj.newintercon = &nlwn.newintercon;
+        finalgpulwobj.finalintergeo = &nlwn.finalintergeo;
+        finalgpulwobj.newextercon = &nlwn.newextercon;
+        finalgpulwobj.finalextergeo = &nlwn.finalextergeo;
+
+        glGenBuffers(1, &finalgpulwobj.FinalLWdesloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.FinalLWdesloc);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.DesLoc->size() * sizeof(uint), finalgpulwobj.DesLoc->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, finalgpulwobj.FinalLWdesloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &finalgpulwobj.FinalLWdesinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.FinalLWdesinfo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.Desinfo->size() * sizeof(uint), finalgpulwobj.Desinfo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, finalgpulwobj.FinalLWdesinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &finalgpulwobj.FinalLWintercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.FinalLWintercon);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.newintercon->size() * sizeof(uint), finalgpulwobj.newintercon->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, finalgpulwobj.FinalLWintercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &finalgpulwobj.FinalLWextercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.FinalLWextercon);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.newextercon->size() * sizeof(uint), finalgpulwobj.newextercon->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, finalgpulwobj.FinalLWextercon);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &finalgpulwobj.FinalLWintergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.FinalLWintergeo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.finalintergeo->size() * sizeof(uint), finalgpulwobj.finalintergeo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, finalgpulwobj.FinalLWintergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &finalgpulwobj.FinalLWextergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.FinalLWextergeo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, finalgpulwobj.finalextergeo->size() * sizeof(uint), finalgpulwobj.finalextergeo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, finalgpulwobj.FinalLWextergeo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+    }
+
 
     void Scene::renderCT() {
 
@@ -680,6 +727,29 @@ namespace glfwviewer {
         glBeginQuery(GL_TIME_ELAPSED, query);
 
         glDrawMeshTasksNV(0, gpulwobj.DesLoc->size());
+
+        glEndQuery(GL_TIME_ELAPSED);
+
+        // 等待查询结果
+        GLuint64 elapsedTime;
+        glGetQueryObjectui64v(query, GL_QUERY_RESULT, &elapsedTime);
+
+        // 删除查询对象
+        glDeleteQueries(1, &query);
+
+        // 输出执行时间
+        std::cout << "glDrawArrays execution time: " << elapsedTime / 1000000.0 << " milliseconds" << std::endl;
+    }
+
+    void Scene::renderFinalGPULW()
+    {
+        GLuint query;
+        glGenQueries(1, &query);
+
+        // 提交命令之前插入时间戳查询开始
+        glBeginQuery(GL_TIME_ELAPSED, query);
+
+        glDrawMeshTasksNV(0, finalgpulwobj.DesLoc->size());
 
         glEndQuery(GL_TIME_ELAPSED);
 

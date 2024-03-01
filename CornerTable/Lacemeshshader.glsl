@@ -4,7 +4,7 @@
 
 #define WIREEND 0xFF
 #define EMPTYWIRE 0xFFFFFFFF
-#define INGEOMASK 0xFC000000
+
 
 
 layout(local_size_x=GROUP_SIZE) in;

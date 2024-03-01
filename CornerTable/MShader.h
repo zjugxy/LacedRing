@@ -107,6 +107,11 @@ public:
         glUniformMatrix4fv(matLoc, 1, GL_FALSE, glm::value_ptr(matrix));
     }
 
+    void setVec12(const std::string& name,const std::vector<float> data) {
+        GLint uniformLocation = glGetUniformLocation(ID, name.c_str());
+        glUniform1fv(uniformLocation, 12, data.data());
+    }
+
 private:
     // utility function for checking shader compilation/linking errors.
     // ------------------------------------------------------------------------

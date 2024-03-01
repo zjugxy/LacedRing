@@ -21,8 +21,8 @@ int main()
 {
     MyMesh mesh;
     Meshlets meshlets;
-    std::string filename = "E:/OpenMesh/Models/horse/horse.obj";
-    std::string debugfile = "E:/OpenMesh/Models/horse/horse.meshlets";
+    std::string filename = "E:/OpenMesh/Models/wtbunny/wtbunny.obj";
+    std::string debugfile = "E:/OpenMesh/Models/wtbunny/wtbunny.meshlets";
     // generate vertices
     meshlets = readVectorFromFile(debugfile);
 
@@ -58,7 +58,7 @@ int main()
         meshlets = nclu.oldmeshlets;
 
 
-        int flag = 1;
+        int flag = 3;
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
@@ -94,7 +94,7 @@ int main()
         }
         else if(flag ==1){
             NewLWGenerator nlwgen(nclu);
-            nlwgen.FUNC(mesh);
+            nlwgen.FUNC(mesh,flag);
             myscene.LoadSimpleWireMeshlet(nlwgen);
             //myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
@@ -116,7 +116,7 @@ int main()
         }
         else if(flag == 2){
             NewLWGenerator nlwgen(nclu);
-            nlwgen.FUNC(mesh);
+            nlwgen.FUNC(mesh,flag);
             myscene.LoadGPULW(nlwgen);
             myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
@@ -130,6 +130,33 @@ int main()
                 myview.RenderFINALLWML();
                 myview.RenderWireLine();
                 //myview.RenderInterWire();
+                glfwSwapBuffers(myview.MYwindow());
+                glfwPollEvents();
+            }
+            glfwTerminate();
+            exit(EXIT_SUCCESS);
+        }
+        else if (flag == 3) {
+            NewLWGenerator nlwgen(nclu);
+            nlwgen.FUNC(mesh,flag);
+            //myscene.LoadGPULW(nlwgen);
+
+            myscene.LoadFinalLaceWire(nlwgen);
+            myscene.LoadInternalWire(mesh, nlwgen);
+            myscene.LoadLaceWire(mesh, nclu);
+
+
+            myview.set(&myscene);
+            myview.setMeshshader("finallacewiremeshshader.glsl", "TSfragshader.glsl");
+            myview.setlineshader("ringvertex.glsl", "ringfrag.glsl");
+
+            while (!glfwWindowShouldClose(myview.MYwindow()))
+            {
+                myview.processinput();
+
+                myview.RenderFinalLaceWireMesh(nlwgen.uniformMeshGlodata);
+                myview.RenderWireLine();
+
                 glfwSwapBuffers(myview.MYwindow());
                 glfwPollEvents();
             }

@@ -176,6 +176,7 @@
     <ClInclude Include="Viewer\viewermath.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="finallacewiremeshshader.glsl" />
     <None Include="fragshader.glsl" />
     <None Include="geometryshader.glsl" />
     <None Include="IXmeshshader.glsl" />

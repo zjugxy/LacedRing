@@ -125,17 +125,21 @@ public:
 	std::vector<float> intergeo;
 	std::vector<float> extergeo;
 
+	std::vector<uint> finalintergeo;
+	std::vector<uint> finalextergeo;
+
 	std::vector<PackGEO> packexter;
 	std::vector<PackGEO> packinter;
 	UnitBox MeshTransBox;
 	UnitBox MeshScaleBox;
 
 	std::vector<std::vector<int>> bitnums;
+	std::vector<float> uniformMeshGlodata;
 
 public:
 	NewLWGenerator(const NewCluster& nclu);
 
-	void FUNC(const MyMesh& mesh);
+	void FUNC(const MyMesh& mesh,int flag);
 	void ExportFile(const std::string& filename);
 
 private:
@@ -161,6 +165,8 @@ private:
 	void PackNoPlane(PackGEO& tempgeo, const MyMesh& mesh, const MeshletBody& ewire);
 
 	void PackGPULW(const MyMesh& mesh);
+
+	void PackFinalLaceWire();
 
 	void BitSortGen(int highestnum,int minvalue);
 	void VertexBitGen(const MyMesh& mesh,float errorpercent);

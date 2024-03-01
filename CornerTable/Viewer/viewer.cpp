@@ -337,6 +337,26 @@ namespace glfwviewer {
 		 m_scene->renderGPULW();
 	 }
 
+	 void Viewer::RenderFinalLaceWireMesh(std::vector<float>& meshglodata)
+	 {
+		 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		 m_meshshader.use();
+
+		 m_meshshader.setVec3("viewPos", m_camera.center());
+		 m_meshshader.setVec3("lightPos", m_light.lightpos);
+		 m_meshshader.setVec3("lightColor", m_light.lightcolor);
+
+		 glm::mat4 model = glm::mat4(1.0f);
+		 m_meshshader.setMat4("projection", m_camera.projMatrix());
+		 m_meshshader.setMat4("view", m_camera.viewMatrix());
+		 m_meshshader.setMat4("model", model);
+		 m_meshshader.setVec12("MeshGloData",meshglodata);
+
+		 glPointSize(10.0);
+		 m_scene->renderFinalGPULW();
+	 }
+
 	 void Viewer::RenderNormalLine()
 	 {
 		 m_line_shader.use();

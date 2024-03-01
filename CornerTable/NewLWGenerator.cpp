@@ -34,20 +34,20 @@ NewLWGenerator::NewLWGenerator(const NewCluster& nclu)
 
 }
 
-void NewLWGenerator::FUNC(const MyMesh& mesh)
+void NewLWGenerator::FUNC(const MyMesh& mesh,int flag)
 {
 	InternalWireGenerator(mesh);
 	LeftRightGenertor(mesh);
 
 	//VertexQuantization(mesh);
 	NewVertexQuantization(mesh);
-
-
 	GEObitflowPack();
-
-	PackSimpleLaceWire(mesh);
-
-	PackGPULW(mesh);
+	if (flag == 1)
+		PackSimpleLaceWire(mesh);
+	else if (flag == 2)
+		PackGPULW(mesh);
+	else if (flag == 3)
+		PackFinalLaceWire();
 }
 
 void NewLWGenerator::InternalWireGenerator(const MyMesh& mesh)
@@ -905,17 +905,17 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 	for (uint mid = 0; mid < targets.size(); ++mid) {
 		int cnt = 0;
 		for (auto& id : targets[mid].ewireidx) {
-
-			uint location = Egeoloc[id];
 			uchar num = static_cast<uchar>(gloEwires[id].vertex.size());
 
 			if (targets[mid].reverse[cnt] == true)
 				num = num | 0x80;
 			records[mid].numexver.push_back(num);
-			records[mid].exgeolocation.push_back(location);
+			records[mid].exgeolocation.push_back(Egeoloc[id]);
 			records[mid].exconlocation.push_back(Econloc[id]);
 			cnt++;
 		}
+
+		assert(targets[mid].ewireidx.size() <= 15);//这个关系到mesh shader里面开的ewire数组
 	}
 
 	for (uint mid = 0; mid < targets.size(); ++mid) {
@@ -954,6 +954,171 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 	for (uint i = 0; i < intercon.size(); i += 4)
 		newintercon.push_back(PackChar4Uint(intercon[i], intercon[i + 1], intercon[i + 2], intercon[i + 3]));
 
+}
+
+void NewLWGenerator::PackFinalLaceWire()
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dis(0.0, 1.0);
+
+	std::vector<MeshletDes> records;
+	records.resize(targets.size());
+
+	//pack inter geo
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		auto& intermesh = targets[mid].InternalLW;
+		uint vertexnum;
+		if (intermesh.vertex[0] == EMPTYWIRE)
+			vertexnum = 0;
+		else
+			vertexnum = intermesh.vertex.size();
+
+		records[mid].ewirenum = static_cast<uchar>(targets[mid].ewireidx.size());
+		records[mid].irrnum = static_cast<uchar>(intermesh.irregular.size() / 3);
+		records[mid].numvertex = static_cast<uchar>(internalbuilders[mid].vertices.size());
+
+		records[mid].color[0] = static_cast<uchar>(dis(gen) * 255);
+		records[mid].color[1] = static_cast<uchar>(dis(gen) * 255);
+		records[mid].color[2] = static_cast<uchar>(dis(gen) * 255);
+
+		records[mid].numinver = vertexnum;
+		//records[mid].useless2 = 0;
+
+
+		uint location = finalintergeo.size();
+		records[mid].ingeolocation = location;
+		records[mid].inconlocation = intercon.size() / 4;
+
+		if (vertexnum != 0) {
+			//for (auto& ver : intermesh.vertex) {
+			//	auto vh = mesh.vertex_handle(ver);
+			//	auto pnt = mesh.point(vh);
+			//	intergeo.push_back(pnt[0]);
+			//	intergeo.push_back(pnt[1]);
+			//	intergeo.push_back(pnt[2]);
+			//}
+			for (auto& ver : packinter[mid].geobitflow)
+				finalintergeo.push_back(ver);
+
+			assert(intermesh.left.size() == intermesh.vertex.size());
+			assert(intermesh.left.size() == intermesh.right.size());
+
+			for (auto& elem : intermesh.left)
+				intercon.push_back(elem);
+			for (auto& elem : intermesh.right)
+				intercon.push_back(elem);
+		}
+
+		for (auto& elem : intermesh.irregular)
+			intercon.push_back(elem);
+
+		while (intercon.size() % 4 != 0)
+		{
+			intercon.push_back(0);
+		}
+	}
+
+	assert(finalintergeo.size() < (0xFFFFFFFF));
+	assert(intercon.size() < 0xFFFFFFFF);
+
+	//pack globol ewire
+	std::vector<uint> Econloc;
+	std::vector<uint> Egeoloc;
+	uint eid = 0;
+	for (auto& wire : gloEwires) {
+		Egeoloc.push_back(finalextergeo.size());
+		Econloc.push_back(extercon.size() / 4);
+
+		//for (auto& ver : wire.vertex) {
+		//	auto vh = mesh.vertex_handle(ver);
+		//	auto pnt = mesh.point(vh);
+		//	extergeo.push_back(pnt[0]);
+		//	extergeo.push_back(pnt[1]);
+		//	extergeo.push_back(pnt[2]);
+		//}
+		for (auto& ver : packexter[eid].geobitflow)
+			finalextergeo.push_back(ver);
+
+		for (auto& elem : wire.left)
+			extercon.push_back(elem);
+		for (uint i = 0; i < wire.right.size(); ++i)
+			extercon.push_back(wire.right[wire.right.size() - i - 1]);
+
+		while (extercon.size() % 4 != 0)
+		{
+			extercon.push_back(0);
+		}
+		eid++;
+		assert(wire.right.size() == wire.left.size());
+		assert(wire.right.size() == wire.vertex.size());
+	}
+
+	assert(finalextergeo.size() < (0xFFFFFFFF));
+	assert(extercon.size() < 0xFFFFFFFF);
+
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		int cnt = 0;
+		for (auto& id : targets[mid].ewireidx) {
+			uchar num = static_cast<uchar>(gloEwires[id].vertex.size());
+
+			if (targets[mid].reverse[cnt] == true)
+				num = num | 0x80;
+			records[mid].numexver.push_back(num);
+			records[mid].exgeolocation.push_back(Egeoloc[id]);
+			records[mid].exconlocation.push_back(Econloc[id]);
+			cnt++;
+		}
+
+		assert(targets[mid].ewireidx.size() <= 15);//这个关系到mesh shader里面开的ewire数组
+	}
+
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		DesLoc.push_back(Desinfo.size());
+
+		while ((records[mid].numexver.size() % 4) != 0)
+			records[mid].numexver.push_back(0);
+		records[mid].ingeostart = static_cast<uchar>(2 + records[mid].numexver.size() / 4);
+
+		Desinfo.push_back(PackChar4Uint(records[mid].ewirenum, records[mid].color[0],
+			records[mid].color[1], records[mid].color[2]));
+
+		Desinfo.push_back(PackChar4Uint(records[mid].irrnum, records[mid].numvertex,
+			records[mid].numinver, records[mid].ingeostart));
+
+		for (int i = 0; i < records[mid].numexver.size(); i += 4) {
+			Desinfo.push_back(PackChar4Uint(records[mid].numexver[i], records[mid].numexver[i + 1],
+				records[mid].numexver[i + 2], records[mid].numexver[i + 3]));
+		}
+
+		Desinfo.push_back(records[mid].ingeolocation);
+		Desinfo.push_back(records[mid].inconlocation);
+		for (auto& elem : records[mid].exgeolocation)
+			Desinfo.push_back(elem);
+		for (auto& elem : records[mid].exconlocation)
+			Desinfo.push_back(elem);
+	}
+
+	assert(Desinfo.size() < 0xFFFFFFFF);
+
+	assert(extercon.size() % 4 == 0);
+	assert(intercon.size() % 4 == 0);
+	for (uint i = 0; i < extercon.size(); i += 4)
+		newextercon.push_back(PackChar4Uint(extercon[i], extercon[i + 1], extercon[i + 2], extercon[i + 3]));
+
+	for (uint i = 0; i < intercon.size(); i += 4)
+		newintercon.push_back(PackChar4Uint(intercon[i], intercon[i + 1], intercon[i + 2], intercon[i + 3]));
+
+
+	uniformMeshGlodata = std::vector<float>{
+		MeshTransBox.minx,MeshTransBox.maxx - MeshTransBox.minx,
+		MeshTransBox.miny,MeshTransBox.maxy - MeshTransBox.miny,
+		MeshTransBox.minz,MeshTransBox.maxz - MeshTransBox.minz,
+		MeshScaleBox.minx,MeshScaleBox.maxx / MeshScaleBox.minx,
+		MeshScaleBox.miny,MeshScaleBox.maxy / MeshScaleBox.miny,
+		MeshScaleBox.minz,MeshScaleBox.maxz / MeshScaleBox.minz
+
+	};
 }
 
 void NewLWGenerator::BitSortGen(int highestnum = 30, int minvalue = 2)
@@ -1032,22 +1197,23 @@ void NewLWGenerator::VertexBitGen(const MyMesh& mesh,float errorpercent)
 			assert(type3 <(bitnums.size()-1) && "error in vertex bit gen");
 		}
 
-		std::cout << "eid is " <<eid << " " << uint(tempgeo.xnum) << " " << uint(tempgeo.ynum) << " " << uint(tempgeo.znum) << std::endl;
 
 #ifndef NDEBUG
 		//test
 		{
-			int xnum = tempgeo.xnum, ynum = tempgeo.ynum, znum = tempgeo.znum;
-			for (uint vid = 0; vid < gloEwires[eid].vertex.size(); ++vid) {
-				auto ver = gloEwires[eid].vertex[vid];
-				auto pnt = mesh.point(mesh.vertex_handle(ver));
-				auto rawdata = Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] };
-				Eigen::Vector3d compressedata = tempgeo.datatocompress[vid];
+			//std::cout << "eid is " << eid << " " << uint(tempgeo.xnum) << " " << uint(tempgeo.ynum) << " " << uint(tempgeo.znum) << std::endl;
 
-				Eigen::Vector3d tempdata = cutfloatByBit(compressedata, xnum, ynum, znum);
-				Eigen::Vector3d cmpdata = dequanmatrix * tempdata + tranvec;
-				std::cout << (cmpdata - rawdata).norm() << std::endl;
-			}
+			//int xnum = tempgeo.xnum, ynum = tempgeo.ynum, znum = tempgeo.znum;
+			//for (uint vid = 0; vid < gloEwires[eid].vertex.size(); ++vid) {
+			//	auto ver = gloEwires[eid].vertex[vid];
+			//	auto pnt = mesh.point(mesh.vertex_handle(ver));
+			//	auto rawdata = Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] };
+			//	Eigen::Vector3d compressedata = tempgeo.datatocompress[vid];
+
+			//	Eigen::Vector3d tempdata = cutfloatByBit(compressedata, xnum, ynum, znum);
+			//	Eigen::Vector3d cmpdata = dequanmatrix * tempdata + tranvec;
+			//	std::cout << (cmpdata - rawdata).norm() << std::endl;
+			//}
 		}
 #endif // !NDEBUG
 
@@ -1108,21 +1274,22 @@ void NewLWGenerator::VertexBitGen(const MyMesh& mesh,float errorpercent)
 
 		}
 
-		std::cout << "iid is " << iid << " " << uint(tempgeo.xnum) << " " << uint(tempgeo.ynum) << " " << uint(tempgeo.znum) << std::endl;
 #ifndef NDEBUG
 		//test
 		{
-			int xnum = tempgeo.xnum, ynum = tempgeo.ynum, znum = tempgeo.znum;
-			for (uint vid = 0; vid < targets[iid].InternalLW.vertex.size(); ++vid) {
-				auto ver = targets[iid].InternalLW.vertex[vid];
-				auto pnt = mesh.point(mesh.vertex_handle(ver));
-				auto rawdata = Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] };
-				Eigen::Vector3d compressedata = tempgeo.datatocompress[vid];
+			//std::cout << "iid is " << iid << " " << uint(tempgeo.xnum) << " " << uint(tempgeo.ynum) << " " << uint(tempgeo.znum) << std::endl;
 
-				Eigen::Vector3d tempdata = cutfloatByBit(compressedata, xnum, ynum, znum);
-				Eigen::Vector3d cmpdata = dequanmatrix * tempdata + tranvec;
-				std::cout << (cmpdata - rawdata).norm() << std::endl;
-			}
+			//int xnum = tempgeo.xnum, ynum = tempgeo.ynum, znum = tempgeo.znum;
+			//for (uint vid = 0; vid < targets[iid].InternalLW.vertex.size(); ++vid) {
+			//	auto ver = targets[iid].InternalLW.vertex[vid];
+			//	auto pnt = mesh.point(mesh.vertex_handle(ver));
+			//	auto rawdata = Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] };
+			//	Eigen::Vector3d compressedata = tempgeo.datatocompress[vid];
+
+			//	Eigen::Vector3d tempdata = cutfloatByBit(compressedata, xnum, ynum, znum);
+			//	Eigen::Vector3d cmpdata = dequanmatrix * tempdata + tranvec;
+			//	std::cout << (cmpdata - rawdata).norm() << std::endl;
+			//}
 		}
 #endif // !NDEBUG
 	}
@@ -1331,11 +1498,11 @@ void NewLWGenerator::CheckByDequantize(const MyMesh& mesh)
 			//assert(result.z() < 1.001);
 
 			//由于scale每一个元素通过8bit表示 1符号位7数值位
-			std::cout << "差距是 " << (dequandata - rawdata).norm() << std::endl;
-			if ((dequandata - rawdata).norm() > MINREQUIRE) {
-				std::cout << "debug 需要放大scale elem的放大率" << std::endl;
-				assert(false);
-			}
+			//std::cout << "差距是 " << (dequandata - rawdata).norm() << std::endl;
+			//if ((dequandata - rawdata).norm() > MINREQUIRE) {
+			//	std::cout << "debug 需要放大scale elem的放大率" << std::endl;
+			//	assert(false);
+			//}
 		}
 
 

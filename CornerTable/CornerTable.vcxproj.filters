@@ -151,6 +151,9 @@
     <None Include="PointSimpleLaceWiremeshshader.glsl">
       <Filter>shaders\Meshshader</Filter>
     </None>
+    <None Include="finallacewiremeshshader.glsl">
+      <Filter>shaders\Meshshader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.md" />
