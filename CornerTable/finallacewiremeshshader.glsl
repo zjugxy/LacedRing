@@ -5,7 +5,7 @@
 #define WIREEND 0xFF
 #define EMPTYWIRE 0xFFFFFFFF
 //后面可以改小
-#define MEM_LOCAT 32
+#define MEM_LOCAT 16
 #define TWOPI 6.28318530718
 //需要这里解析geo数据
 
@@ -41,7 +41,6 @@ layout(std430,binding = 6) readonly buffer layoutExterGeo{
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-
 uniform float MeshGloData[12];
 // mesh output
 layout (location = 0) out myPerVertexData
@@ -114,12 +113,16 @@ uint GetExterConInfo(uint constart,uint seq){
 }
 //**************
 
-mat3 DequanMatrixs[MEM_LOCAT];
-vec3 TransVec[MEM_LOCAT];
-uint xlength[MEM_LOCAT];
-uint ylength[MEM_LOCAT];
-uint zlength[MEM_LOCAT];
-uint pntlength[MEM_LOCAT];
+shared mat3 INDeqmat;
+shared vec3 INtranvec;
+shared uint inx,iny,inz,inpnt;
+
+shared mat3 DequanMatrixs[MEM_LOCAT];
+shared vec3 TransVec[MEM_LOCAT];
+shared uint xlength[MEM_LOCAT];
+shared uint ylength[MEM_LOCAT];
+shared uint zlength[MEM_LOCAT];
+shared uint pntlength[MEM_LOCAT];
 
 
 uint presum[MEM_LOCAT];
@@ -217,6 +220,42 @@ vec4 ParseInterPnt(uint geoidx,uint startidx,uint startloc){
 }
 
 
+vec3 newParse(uint startidx,uint startloc,uint temppntlength,uint tempxnum,uint tempynum,uint tempznum){
+
+
+    uint start = startidx/32;
+    uint end = (startidx+temppntlength - 1)/32;
+    uint offset = startidx%32;
+
+    uint value;
+    if(start==end){
+        uint mask = (1<<temppntlength)-1;
+        value = (InterGeo[start+startloc]>>offset)&mask;
+        }
+    else{
+        uint lowvalue = InterGeo[start+startloc]>>offset;
+        uint highnum = temppntlength +offset - 32;
+        uint highmask = (1<<highnum)-1;
+        uint highvalue = InterGeo[start+1+startloc]&highmask;
+        value = lowvalue+(highvalue<<(temppntlength - highnum));
+    }
+
+    uint xmask = (1<<tempxnum)-1;
+    uint ymask = (1<<tempynum)-1;
+    uint zmask = (1<<tempznum)-1;
+
+    uint xvalue = value&xmask;
+    uint yvalue = (value>>tempxnum)&ymask;
+    uint zvalue = (value>>(tempxnum+tempynum))&zmask;
+
+    vec3 rawdata =  vec3(
+        float(xvalue)/float(xmask)*2.0-1.0,
+        float(yvalue)/float(ymask)*2.0-1.0,
+        float(zvalue)/float(zmask)*2.0-1.0
+    );
+    return rawdata;
+}
+
 vec4 ParseExterPnt(uint geoidx,uint startidx,uint startloc){
     uint temppntlength = pntlength[geoidx];
     uint tempxnum = xlength[geoidx];
@@ -278,6 +317,7 @@ void main(){
     uint start = DesLoc[mid];
     uint ewirenum = AnaUint(DesInfo[start],0);
 	vec3 meshletcolor = extractColorFromUint(DesInfo[start]);
+
     uint irrnum = AnaUint(DesInfo[start+1],0);
 	uint numvertex = AnaUint(DesInfo[start+1],1);
     uint intergeonum = AnaUint(DesInfo[start+1],2);
@@ -302,43 +342,50 @@ void main(){
 	}
 
     //vertex part matrix
-    if(mid>=0){
+    if(threadid == 0){
+        if(intergeonum!=0){
+            ParseTempGeo(InterGeo[intergeolocation],InterGeo[intergeolocation+1],InterGeo[intergeolocation+2],INDeqmat,INtranvec,inx,iny,inz,inpnt);
+
+            for(uint i = 0;i<intergeonum;++i){
+                vec3 rawdata = newParse(96+i*inpnt,intergeolocation,inpnt,inx,iny,inz);
+                rawdata = INDeqmat*rawdata+INtranvec;
+                vec4 vergeo = vec4(rawdata,1.0);
+                
+                gl_MeshVerticesNV[i].gl_Position = projection*view*model*vergeo;
+			    v_out[i+threadid].color = meshletcolor;
+            }
+        }
+    }
 
     if(threadid==0){
-        ParseTempGeo(InterGeo[intergeolocation],InterGeo[intergeolocation+1],InterGeo[intergeolocation+2],
-            DequanMatrixs[0],TransVec[0],xlength[0],ylength[0],zlength[0],pntlength[0]);
-    }
-    
-    for(int i=0;i+threadid < ewirenum;i+=GROUP_SIZE){
-        ParseTempGeo(ExterGeo[DesInfo[extergeostartindes+i+threadid]+0],
-                    ExterGeo[DesInfo[extergeostartindes+i+threadid]+1],
-                    ExterGeo[DesInfo[extergeostartindes+i+threadid]+2],
-            DequanMatrixs[i+threadid+1],TransVec[i+threadid+1],xlength[i+threadid+1],ylength[i+threadid+1],zlength[i+threadid+1],
-            pntlength[i+threadid+1]);
-    }
-    //vertex 
-    for(int i = 0; i+threadid<intergeonum;i+=GROUP_SIZE){
-			vec4 vergeo = ParseInterPnt(0,96+(i*threadid)*pntlength[0],intergeolocation);
-			gl_MeshVerticesNV[i+threadid].gl_Position = projection*view*model*vergeo;
-			v_out[i+threadid].color = meshletcolor;
-	}
-
-	for(int i = 0; i+threadid < numvertex - intergeonum;i+=GROUP_SIZE){
-		uint wireid = FindWireId(i+threadid,ewirenum);
-        uint temp = 0;
-        if(wireid!=0)
-            temp = presum[wireid-1];
-        uint vertexid;
-        if(reverse[wireid]==false)
-            vertexid = i+threadid - temp;
-        else
-            vertexid = presum[wireid] - (i+threadid);
-
-        uint geoloc = DesInfo[start+2+ingeostart+wireid];
-        vec4 vergeo = ParseExterPnt(wireid+1,96+vertexid*pntlength[wireid+1],geoloc);
-        gl_MeshVerticesNV[i+threadid+intergeonum].gl_Position = projection*view*model*vergeo;
-        v_out[i+threadid+intergeonum].color = meshletcolor;
+        for(int i=0;i<ewirenum;++i){
+            uint loc = DesInfo[start+2+ingeostart+i];
+            ParseTempGeo(ExterGeo[loc],ExterGeo[loc+1],ExterGeo[loc+2],DequanMatrixs[i],TransVec[i],xlength[i],ylength[i],zlength[1],pntlength[i]);
         }
+
+        for(int i = 0; i < numvertex - intergeonum;i++){
+		    uint wireid = FindWireId(i,ewirenum);
+            uint temp = 0;
+            if(wireid!=0)
+                temp = presum[wireid-1];
+            uint vertexid;
+            if(reverse[wireid]==false)
+                vertexid = i - temp;
+            else
+                vertexid = presum[wireid] - (i);
+            uint geoloc = (DesInfo[start+2+ingeostart+wireid]);
+
+
+
+
+            vec4 vergeo = ParseExterPnt(wireid,96+pntlength[wireid]*vertexid,geoloc);
+            gl_MeshVerticesNV[i+intergeonum].gl_Position = projection*view*model*vergeo;
+            v_out[i+intergeonum].color = meshletcolor;
+	    }
+
+    }
+
+
 
     // con part
      for(int i=0;i+threadid<intergeonum*2;i+=GROUP_SIZE){
@@ -401,5 +448,5 @@ void main(){
 
 	if(threadid==0)
 			gl_PrimitiveCountNV = intergeonum*2+exvernum+irrnum;
-    }
+    
 }

@@ -47,7 +47,7 @@ void NewLWGenerator::FUNC(const MyMesh& mesh,int flag)
 	else if (flag == 2)
 		PackGPULW(mesh);
 	else if (flag == 3)
-		PackFinalLaceWire();
+		PackFinalLaceWire(mesh);
 }
 
 void NewLWGenerator::InternalWireGenerator(const MyMesh& mesh)
@@ -408,7 +408,12 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 
 					for (int i = 0; i < targets[mid].InternalLW.vertex.size(); ++i) {
 						Eigen::Vector3d  temppnt = ReadData(tempgeo.geobitflow, 12 * 8 + pntlength * i, tempgeo.xnum, tempgeo.ynum, tempgeo.znum);
-						auto pnt = dequanmatrix * temppnt + tranvec;
+						
+						Eigen::Vector3d cmppnt = GLSLReadData(tempgeo.geobitflow, 12 * 8 + pntlength * i, tempgeo.xnum, tempgeo.ynum, tempgeo.znum);
+						
+						std::cout << (temppnt - cmppnt).norm() << std::endl;
+						
+						auto pnt = dequanmatrix * cmppnt + tranvec;
 						//auto cmpvalue = mesh.point(mesh.vertex_handle(targets[mid].InternalLW.vertex[i]));
 						//Eigen::Vector3d cmpvec{ cmpvalue[0],cmpvalue[1],cmpvalue[2] };
 						geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
@@ -445,6 +450,11 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 						for (int i = 0; i <gloEwires[eid].vertex.size() - 1; ++i) {
 							Eigen::Vector3d  temppnt = ReadData(tempgeo.geobitflow, 12 * 8 + pntlength * i, tempgeo.xnum, tempgeo.ynum, tempgeo.znum);
 							auto pnt = dequanmatrix * temppnt + tranvec;
+
+
+							Eigen::Vector3d cmppnt = GLSLReadData(tempgeo.geobitflow, 12 * 8 + pntlength * i, tempgeo.xnum, tempgeo.ynum, tempgeo.znum);
+
+							std::cout << (temppnt - cmppnt).norm() << std::endl;
 							//auto cmpvalue = mesh.point(mesh.vertex_handle(targets[mid].InternalLW.vertex[i]));
 							//Eigen::Vector3d cmpvec{ cmpvalue[0],cmpvalue[1],cmpvalue[2] };
 							geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
@@ -454,7 +464,10 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 					else {
 						for (int i = gloEwires[eid].vertex.size() - 1; i != 0; --i) {
 							Eigen::Vector3d  temppnt = ReadData(tempgeo.geobitflow, 12 * 8 + pntlength * i, tempgeo.xnum, tempgeo.ynum, tempgeo.znum);
-							auto pnt = dequanmatrix * temppnt + tranvec;
+							Eigen::Vector3d cmppnt = GLSLReadData(tempgeo.geobitflow, 12 * 8 + pntlength * i, tempgeo.xnum, tempgeo.ynum, tempgeo.znum);
+							auto pnt = dequanmatrix * cmppnt + tranvec;
+
+							std::cout << (temppnt - cmppnt).norm() << std::endl;
 							//auto cmpvalue = mesh.point(mesh.vertex_handle(targets[mid].InternalLW.vertex[i]));
 							//Eigen::Vector3d cmpvec{ cmpvalue[0],cmpvalue[1],cmpvalue[2] };
 							geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
@@ -956,7 +969,7 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 
 }
 
-void NewLWGenerator::PackFinalLaceWire()
+void NewLWGenerator::PackFinalLaceWire(const MyMesh& mesh)
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -967,6 +980,10 @@ void NewLWGenerator::PackFinalLaceWire()
 
 	//pack inter geo
 	for (uint mid = 0; mid < targets.size(); ++mid) {
+
+		if (mid == 61)
+			std::cout << "debug";
+
 		auto& intermesh = targets[mid].InternalLW;
 		uint vertexnum;
 		if (intermesh.vertex[0] == EMPTYWIRE)
@@ -1119,6 +1136,8 @@ void NewLWGenerator::PackFinalLaceWire()
 		MeshScaleBox.minz,MeshScaleBox.maxz / MeshScaleBox.minz
 
 	};
+
+	FinalCheckOnGEO(mesh);
 }
 
 void NewLWGenerator::BitSortGen(int highestnum = 30, int minvalue = 2)
@@ -1838,6 +1857,16 @@ void NewLWGenerator::GEObitflowPack()
 
 	}
 
+
+	uniformMeshGlodata = std::vector<float>{
+	MeshTransBox.minx,MeshTransBox.maxx - MeshTransBox.minx,
+	MeshTransBox.miny,MeshTransBox.maxy - MeshTransBox.miny,
+	MeshTransBox.minz,MeshTransBox.maxz - MeshTransBox.minz,
+	MeshScaleBox.minx,MeshScaleBox.maxx / MeshScaleBox.minx,
+	MeshScaleBox.miny,MeshScaleBox.maxy / MeshScaleBox.miny,
+	MeshScaleBox.minz,MeshScaleBox.maxz / MeshScaleBox.minz
+
+	};
 }
 
 void NewLWGenerator::InsertGeoValue(std::vector<uint>& bitflow, uint startidx, uint length, float rawvalue)
@@ -2047,6 +2076,42 @@ Eigen::Vector3d NewLWGenerator::ReadData(const std::vector<uint>& geobits, uint 
 	return Eigen::Vector3d{x,y,z};
 }
 
+Eigen::Vector3d NewLWGenerator::GLSLReadData(const std::vector<uint>& geobits, uint startidx, uint xnum, uint ynum, uint znum)
+{
+	uint start = startidx / 32;
+	uint end = (startidx + xnum+ynum+znum - 1) / 32;
+	uint offset = startidx % 32;
+	uint temppntlength = xnum + ynum + znum;
+
+	uint value;
+	if (start == end) {
+		uint mask = (1 << temppntlength) - 1;
+		value = (geobits[start] >> offset) & mask;
+	}
+	else {
+		uint lowvalue = geobits[start] >> offset;
+		uint highnum = temppntlength + offset - 32;
+		uint highmask = (1 << highnum) - 1;
+		uint highvalue = geobits[start + 1] & highmask;
+		value = lowvalue + (highvalue << (temppntlength - highnum));
+	}
+
+	uint xmask = (1 << xnum) - 1;
+	uint ymask = (1 << ynum) - 1;
+	uint zmask = (1 << znum) - 1;
+
+	uint xvalue = value & xmask;
+	uint yvalue = (value >> xnum) & ymask;
+	uint zvalue = (value >> (xnum + ynum)) & zmask;
+
+	return Eigen::Vector3d(
+		float(xvalue) / float(xmask) * 2.0 - 1.0,
+		float(yvalue) / float(ymask) * 2.0 - 1.0,
+		float(zvalue) / float(zmask) * 2.0 - 1.0
+	);
+
+}
+
 float NewLWGenerator::ReadFloat(const std::vector<uint>& geobits, uint startidx, uint num)
 {
 	int start = startidx / 32;
@@ -2157,4 +2222,221 @@ void NewLWGenerator::ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequa
 	Eigen::DiagonalMatrix<double, 3> scalema;
 	scalema.diagonal() << descalex, descaley, descalez;
 	dequanmatrix = rotationMatrix * scalema;
+}
+
+uint NewLWGenerator::AnaUint(uint value, uint seq)
+{
+	value = (value >> (8 * (3 - seq))) & 0x000000FF;
+	return value;
+}
+
+Eigen::Vector3d NewLWGenerator::ParseInterPnt(Eigen::Matrix3d& dequanmat, Eigen::Vector3d& tranvec, uint startidx, uint startloc,
+	uint temppntlength, uint tempxnum, uint tempynum, uint tempznum)
+{
+	uint start = startidx / 32;
+	uint end = (startidx + temppntlength - 1) / 32;
+	uint offset = startidx % 32;
+
+	uint value;
+	if (start == end) {
+		uint mask = (1 << temppntlength) - 1;
+		value = (finalintergeo[start + startloc] >> offset) & mask;
+	}
+	else {
+		uint lowvalue = finalintergeo[start + startloc] >> offset;
+		uint highnum = temppntlength + offset - 32;
+		uint highmask = (1 << highnum) - 1;
+		uint highvalue = finalintergeo[start + 1 + startloc] & highmask;
+		value = lowvalue + (highvalue << (temppntlength - highnum));
+	}
+
+	uint xmask = (1 << tempxnum) - 1;
+	uint ymask = (1 << tempynum) - 1;
+	uint zmask = (1 << tempznum) - 1;
+
+	uint xvalue = value & xmask;
+	uint yvalue = (value >> tempxnum) & ymask;
+	uint zvalue = (value >> (tempxnum + tempynum)) & zmask;
+
+	Eigen::Vector3d rawdata(
+		float(xvalue) / float(xmask) * 2.0 - 1.0,
+		float(yvalue) / float(ymask) * 2.0 - 1.0,
+		float(zvalue) / float(zmask) * 2.0 - 1.0
+	);
+	rawdata = dequanmat * rawdata + tranvec;
+	return rawdata;
+}
+
+
+//vec4 ParseInterPnt(uint geoidx, uint startidx, uint startloc) {
+//	uint temppntlength = pntlength[geoidx];
+//	uint tempxnum = xlength[geoidx];
+//	uint tempynum = ylength[geoidx];
+//	uint tempznum = zlength[geoidx];
+//
+//	uint start = startidx / 32;
+//	uint end = (startidx + temppntlength - 1) / 32;
+//	uint offset = startidx % 32;
+//
+//	uint value;
+//	if (start == end) {
+//		uint mask = (1 << temppntlength) - 1;
+//		value = (InterGeo[start + startloc] >> offset) & mask;
+//	}
+//	else {
+//		uint lowvalue = InterGeo[start + startloc] >> offset;
+//		uint highnum = temppntlength + offset - 32;
+//		uint highmask = (1 << highnum) - 1;
+//		uint highvalue = InterGeo[start + 1 + startloc] & highmask;
+//		value = lowvalue + (highvalue << (temppntlength - highnum));
+//	}
+//
+//	uint xmask = (1 << tempxnum) - 1;
+//	uint ymask = (1 << tempynum) - 1;
+//	uint zmask = (1 << tempznum) - 1;
+//
+//	uint xvalue = value & xmask;
+//	uint yvalue = (value >> tempxnum) & ymask;
+//	uint zvalue = (value >> (tempxnum + tempynum)) & zmask;
+//
+//	vec3 rawdata = vec3(
+//		float(xvalue) / float(xmask) * 2.0 - 1.0,
+//		float(yvalue) / float(ymask) * 2.0 - 1.0,
+//		float(zvalue) / float(zmask) * 2.0 - 1.0
+//	);
+//	rawdata = DequanMatrixs[geoidx] * rawdata + TransVec[geoidx];
+//	return vec4(rawdata, 1.0);
+//}
+
+Eigen::Matrix3d NewLWGenerator::rotateX(float angle) {
+	float c = cos(angle);
+	float s = sin(angle);
+	Eigen::Matrix3d mat;
+	mat <<
+		1.0, 0.0, 0.0,
+		0.0, c, -s,
+		0.0, s, c
+		;
+	return mat;
+}
+
+Eigen::Matrix3d NewLWGenerator::rotateY(float angle) {
+	float c = cos(angle);
+	float s = sin(angle);
+	Eigen::Matrix3d mat;
+	mat <<
+		c, 0.0, s,
+		0.0, 1.0, 0.0,
+		-s, 0.0, c
+	;
+	return mat;
+}
+
+Eigen::Matrix3d NewLWGenerator::rotateZ(float angle) {
+	float c = cos(angle);
+	float s = sin(angle);
+	Eigen::Matrix3d mat;
+	mat <<
+		c, -s, 0.0,
+		s, c, 0.0,
+		0.0, 0.0, 1.0
+	;
+	return mat;
+}
+
+
+void NewLWGenerator::FinalCheckOnGEO(const MyMesh& mesh)
+{
+
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		auto& tempgeo = packinter[mid];
+		uint start = DesLoc[mid];
+		uint ewirenum = AnaUint(Desinfo[start], 0);
+		//vec3 meshletcolor = extractColorFromUint(DesInfo[start]);
+
+		uint irrnum = AnaUint(Desinfo[start + 1], 0);
+		uint numvertex = AnaUint(Desinfo[start + 1], 1);
+		uint intergeonum = AnaUint(Desinfo[start + 1], 2);
+		if (intergeonum == 0)continue;
+
+		uint ingeostart = AnaUint(Desinfo[start + 1], 3);
+
+
+		uint intergeolocation = Desinfo[start + ingeostart];
+		uint interconlocation = Desinfo[start + ingeostart + 1];
+		uint exterstartgeolocation = Desinfo[start + ingeostart + 2];
+		uint extergeostartindes = start + 2 + ingeostart;
+		uint exterstartconlocation = Desinfo[start + 2 + ingeostart + ewirenum];
+
+		uint parsevalue1 = finalintergeo[intergeolocation];
+		uint parsevalue2 = finalintergeo[intergeolocation+1];
+		uint parsevalue3 = finalintergeo[intergeolocation+2];
+
+
+		uint rotatx = AnaUint(parsevalue1, 0);
+		uint rotaty = AnaUint(parsevalue1, 1);
+		uint rotatz = AnaUint(parsevalue1, 2);
+		uint translatex = AnaUint(parsevalue1, 3);
+
+		assert(rotatx == tempgeo.rotatx);
+		assert(rotaty == tempgeo.rotaty);
+		assert(rotatz == tempgeo.rotatz);
+
+
+		uint translatey = AnaUint(parsevalue2, 0);
+		uint translatez = AnaUint(parsevalue2, 1);
+		uint scalex = AnaUint(parsevalue2, 2);
+		uint scaley = AnaUint(parsevalue2, 3);
+
+		uint scalez = AnaUint(parsevalue3, 0);
+		uint xnum = AnaUint(parsevalue3, 1);
+		uint ynum = AnaUint(parsevalue3, 2);
+		uint znum = AnaUint(parsevalue3, 3);
+		uint pntlength = xnum + ynum + znum;
+
+		assert(xnum == tempgeo.xnum);
+		assert(ynum == tempgeo.ynum);
+		assert(znum == tempgeo.znum);
+
+
+		Eigen::Matrix3d Meulerx = rotateX(float(rotatx) / 255.0 * TWOPI);
+		Eigen::Matrix3d Meulery = rotateY(float(rotaty) / 255.0 * TWOPI);
+		Eigen::Matrix3d Meulerz = rotateZ(float(rotatz) / 255.0 * TWOPI);
+
+		//get scale matrix
+
+		std::vector<float>& MeshGloData = uniformMeshGlodata;
+		float descalex = MeshGloData[6] * pow(MeshGloData[7], float(scalex) / 255.0);
+		float descaley = MeshGloData[8] * pow(MeshGloData[9], float(scaley) / 255.0);
+		float descalez = MeshGloData[10] * pow(MeshGloData[11], float(scalez) / 255.0);
+
+		Eigen::Matrix3d scaleMatrix;
+		scaleMatrix<<
+			descalex, 0.0, 0.0,
+			0.0, descaley, 0.0,
+			0.0, 0.0, descalez
+		;
+
+		Eigen::Matrix3d dequanmatrix = Meulerx * Meulery * Meulerz * scaleMatrix;
+		// get transvec
+		float transx = MeshGloData[0] + (float(translatex) / 255.0) * MeshGloData[1];
+		float transy = MeshGloData[2] + (float(translatey) / 255.0) * MeshGloData[3];
+		float transz = MeshGloData[4] + (float(translatez) / 255.0) * MeshGloData[5];
+		Eigen::Vector3d transvec = Eigen::Vector3d(transx, transy, transz);
+
+
+		for (uint vid = 0; vid < intergeonum; vid++) {
+			Eigen::Vector3d pnt = ParseInterPnt(dequanmatrix, transvec, 96 + vid * pntlength, intergeolocation, pntlength, xnum, ynum, znum);
+			auto vh =mesh.vertex_handle(targets[mid].InternalLW.vertex[vid]);
+			auto temp = mesh.point(vh);
+			auto cmp = Eigen::Vector3d(temp[0], temp[1], temp[2]);
+			std::cout << (cmp - pnt).norm() << std::endl;
+		}
+
+
+	}
+
+
+	return;
+	
 }

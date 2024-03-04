@@ -58,7 +58,7 @@ int main()
         meshlets = nclu.oldmeshlets;
 
 
-        int flag = 3;
+        int flag = 1;
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;

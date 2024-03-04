@@ -123,6 +123,7 @@ void main(){
 		reverse[i] = (exnum & 0x80)!=0;
 	}
 
+    if(mi>=0){
 
 //vertex part
 	for(int i = 0; i+threadid<intergeonum;i+=GROUP_SIZE){
@@ -208,7 +209,7 @@ void main(){
         gl_PrimitiveIndicesNV[triid*3+1] = idx1;
         gl_PrimitiveIndicesNV[triid*3+2] = idx2;
     }
-
+    }
 
 	if(threadid==0)
 			gl_PrimitiveCountNV = intergeonum*2+exvernum+irrnum;
