@@ -353,7 +353,7 @@ namespace glfwviewer {
 		 m_meshshader.setMat4("model", model);
 		 m_meshshader.setVec12("MeshGloData",meshglodata);
 
-		 glPointSize(10.0);
+		 glPointSize(10.0f);
 		 m_scene->renderFinalGPULW();
 	 }
 
@@ -405,6 +405,9 @@ namespace glfwviewer {
 
 	 void Viewer::RenderPoint()
 	 {
+
+		 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		 m_line_shader.use();
 
 

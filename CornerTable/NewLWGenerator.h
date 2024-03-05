@@ -133,6 +133,10 @@ public:
 	UnitBox MeshTransBox;
 	UnitBox MeshScaleBox;
 
+
+	std::vector<vec3> debugpnts;
+
+
 	std::vector<std::vector<int>> bitnums;
 	std::vector<float> uniformMeshGlodata;
 

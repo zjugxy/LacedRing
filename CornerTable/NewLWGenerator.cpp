@@ -15,6 +15,8 @@ NewLWGenerator::NewLWGenerator(const NewCluster& nclu)
 	targets.resize(nummeshlet);
 	internalbuilders.resize(nummeshlet);
 
+
+
 	for (uint i = 0; i < nummeshlet; ++i) {
 		internalbuilders[i].borderset = nclu.buildsets[i].borderset;
 		internalbuilders[i].cornerset = nclu.buildsets[i].cornerset;
@@ -55,14 +57,14 @@ void NewLWGenerator::InternalWireGenerator(const MyMesh& mesh)
 	for (uint mid = 0; mid < nummeshlet; ++mid) {
 		auto& builder = internalbuilders[mid];
 		auto& target = targets[mid];
-		//Ã»ÓÐÄÚÔÚ¶¥µã
+		//Ã»ï¿½ï¿½ï¿½ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½
 		if (builder.borderset.size() == builder.vertices.size()) {
 			target.InternalLW.vertex.push_back(EMPTYWIRE);
 			target.InternalLW.left.push_back(WIREEND);
 			target.InternalLW.right.push_back(WIREEND);
 			continue;
 		}
-		//Ö»ÓÐÒ»¸öÄÚÔÚ¶¥µã
+		//Ö»ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½
 		else if (builder.borderset.size() == (builder.vertices.size() - 1)) {
 			for(auto&ver:builder.vertices)
 				if (builder.borderset.find(ver) == builder.borderset.end()) {
@@ -75,7 +77,7 @@ void NewLWGenerator::InternalWireGenerator(const MyMesh& mesh)
 			continue;
 		}
 		else {
-			//½¨Á¢interwire
+			//ï¿½ï¿½ï¿½ï¿½interwire
 			std::vector<std::unordered_set<uint >> levelofpnts;
 			std::unordered_set<uint> pntstoremove;
 			LevelPntGen(builder.borderset, builder.vertices, levelofpnts, mesh);
@@ -119,7 +121,7 @@ void NewLWGenerator::LeftRightGenertor(const MyMesh& mesh)
 		auto& intermesh = target.InternalLW;
 
 		auto facetoremove = builder.faces;
-		//Ìî³ävidxmap
+		//ï¿½ï¿½ï¿½vidxmap
 		{
 			uchar vidx = 0;
 			for (auto& ver : target.InternalLW.vertex)
@@ -150,7 +152,7 @@ void NewLWGenerator::LeftRightGenertor(const MyMesh& mesh)
 			assert(vidxmap.size() == internalbuilders[mid].vertices.size());
 		}
 
-		//¿ªÊ¼Ìî³äinternal wireµÄleft right
+		//ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½internal wireï¿½ï¿½left right
 		{
 			if (intermesh.vertex[0] == EMPTYWIRE) {
 				assert(intermesh.vertex.size() == 1);
@@ -181,13 +183,13 @@ void NewLWGenerator::LeftRightGenertor(const MyMesh& mesh)
 			}
 		}
 
-		//¿ªÊ¼Ìî³äexternal wire
+		//ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½external wire
 
 		for (uint i = 0; i < target.ewireidx.size(); ++i) {
 			auto& evertex = gloEwires[target.ewireidx[i]].vertex;
 			auto& emesh = gloEwires[target.ewireidx[i]];
 			if (target.reverse[i] == false) {
-				//Ë³Ðò±éÀú
+				//Ë³ï¿½ï¿½ï¿½ï¿½ï¿½
 
 				for (uint j = 0; j < evertex.size() - 1; ++j) {
 					uint startidx = emesh.vertex[j];
@@ -210,7 +212,7 @@ void NewLWGenerator::LeftRightGenertor(const MyMesh& mesh)
 				emesh.left[evertex.size() - 1] = WIREEND;
 			}
 			else {
-				//ÄæÐò±éÀú
+				//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				for (uint j = evertex.size()-1; j != 0; --j) {
 					uint startidx = emesh.vertex[j];
 					uint endidx = emesh.vertex[j - 1];
@@ -278,7 +280,7 @@ void NewLWGenerator::PushAtBack(std::vector<std::unordered_set<uint>>& lpnts, co
 		auto vidx = singlewire.back();
 		auto vh = mesh.vertex_handle(vidx);
 
-		//ÕÒË³ÊÆÕý±éÀúµÄ×îºóÒ»¸öwo'r'kµÄ¶¥µã
+		//ï¿½ï¿½Ë³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½wo'r'kï¿½Ä¶ï¿½ï¿½ï¿½
 		std::vector<int> record;
 
 		auto vvit = mesh.cvv_cwiter(vh);
@@ -288,12 +290,12 @@ void NewLWGenerator::PushAtBack(std::vector<std::unordered_set<uint>>& lpnts, co
 
 		int nextpnt = -1;
 		int startidx = -1;
-		//ÐèÒªÔÚremovepntsÖÐ¼ä¿ªÊ¼±éÀú£¬
+		//ï¿½ï¿½Òªï¿½ï¿½removepntsï¿½Ð¼ä¿ªÊ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		for (int i = 0; i < record.size(); i++)
 			if (pntstoremove.find(record[i]) == pntstoremove.end())
 				startidx = i;
 		assert(startidx != -1);
-		//´Ó startidx¿ªÊ¼
+		//ï¿½ï¿½ startidxï¿½ï¿½Ê¼
 		for (int i = 1; i < record.size(); i++) {
 			auto ver = record[(i + startidx) % record.size()];
 			if (pntstoremove.find(ver) != pntstoremove.end())
@@ -319,7 +321,7 @@ void NewLWGenerator::PushAtFront(std::vector<std::unordered_set<uint>>& lpnts, c
 		auto vidx = singlewire.front();
 		auto vh = mesh.vertex_handle(vidx);
 
-		//ÕÒÄæÊ±ÕëÕý±éÀúµÄ×îºóÒ»¸öwo'r'kµÄ¶¥µã
+		//ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½wo'r'kï¿½Ä¶ï¿½ï¿½ï¿½
 		std::vector<int> record;
 
 		auto vvit = mesh.cvv_ccwiter(vh);
@@ -329,12 +331,12 @@ void NewLWGenerator::PushAtFront(std::vector<std::unordered_set<uint>>& lpnts, c
 
 		int nextpnt = -1;
 		int startidx = -1;
-		//ÐèÒªÔÚremovepntsÖÐ¼ä¿ªÊ¼±éÀú£¬
+		//ï¿½ï¿½Òªï¿½ï¿½removepntsï¿½Ð¼ä¿ªÊ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		for (int i = 0; i < record.size(); i++)
 			if (pntstoremove.find(record[i]) == pntstoremove.end())
 				startidx = i;
 		assert(startidx != -1);
-		//´Ó startidx¿ªÊ¼
+		//ï¿½ï¿½ startidxï¿½ï¿½Ê¼
 		for (int i = 1; i < record.size(); i++) {
 			auto ver = record[(i + startidx) % record.size()];
 			if (pntstoremove.find(ver) != pntstoremove.end())
@@ -356,8 +358,8 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 {
 
 	//
-	//geoinfoÒªÊ¹ÓÃÔ­Ê¼·½·¨pack,ÄÇÃ´¿ÉÄÜÒª´¦Àí³åÍ»ÎÊÌâ£¨µ«ÊÇÖ»ÔÚmeshletÎª50µÄmeshlet³öÏÖÁËÄÄ¸öÇé¿ö
-	//»·ÔõÃ´´¦Àí£¬2 loop-->ÓÐÎÊÌâ
+	//geoinfoÒªÊ¹ï¿½ï¿½Ô­Ê¼ï¿½ï¿½ï¿½ï¿½pack,ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í»ï¿½ï¿½ï¿½â£¨ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½meshletÎª50ï¿½ï¿½meshletï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½
+	//ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½2 loop-->ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	//
 
 	simplemeshlets.resize(nummeshlet);
@@ -382,6 +384,9 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 		//}
 
 
+		if (mid == 51)
+			std::cout << "debug";
+
 		uint vcnt = 0;
 
 		bool usecompressgeo = true;
@@ -403,7 +408,11 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 
 					Eigen::MatrixXd dequanmatrix;
 					Eigen::Vector3d tranvec;
+
 					ParseTempGeo(tempgeo, dequanmatrix, tranvec);
+
+					std::cout << dequanmatrix << std::endl;
+					std::cout << tranvec[0] << " " << tranvec[1] << " " << tranvec[2] << std::endl;
 					uint pntlength = tempgeo.xnum + tempgeo.ynum + tempgeo.znum;
 
 					for (int i = 0; i < targets[mid].InternalLW.vertex.size(); ++i) {
@@ -417,6 +426,9 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 						//auto cmpvalue = mesh.point(mesh.vertex_handle(targets[mid].InternalLW.vertex[i]));
 						//Eigen::Vector3d cmpvec{ cmpvalue[0],cmpvalue[1],cmpvalue[2] };
 						geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
+						if(mid==51)
+							debugpnts.emplace_back(pnt[0], pnt[1], pnt[2]);
+
 						vcnt++;
 					}
 				}
@@ -434,7 +446,7 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 
 
 		//external pnts part
-			//ÕâÀïµÄeid,idx²»Ò»ÑùÐ´µÄºÜ´ó±ç
+			//ï¿½ï¿½ï¿½ï¿½ï¿½eid,idxï¿½ï¿½Ò»ï¿½ï¿½Ð´ï¿½ÄºÜ´ï¿½ï¿½
 			if (usecompressgeo) {
 				for (uint idx = 0; idx < meshlet.ewireidx.size(); ++idx) {
 					uint eid = meshlet.ewireidx[idx];
@@ -471,6 +483,8 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 							//auto cmpvalue = mesh.point(mesh.vertex_handle(targets[mid].InternalLW.vertex[i]));
 							//Eigen::Vector3d cmpvec{ cmpvalue[0],cmpvalue[1],cmpvalue[2] };
 							geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
+
+
 							vcnt++;
 						}
 					}
@@ -630,7 +644,7 @@ Box2d NewLWGenerator::getYZAxis(const MyMesh& mesh, const std::vector<uint>& ver
 		Eigen::Vector3d tempyaxis = cos(radian) * starty + sin(radian) * startz;
 		Eigen::Vector3d tempzaxis = cos(radian) * startz - sin(radian) * starty;
 		assert(tempyaxis.dot(tempzaxis) < 0.0001f);
-		//¼ÆËã2Î¬°üÎ§ºÐ
+		//ï¿½ï¿½ï¿½ï¿½2Î¬ï¿½ï¿½Î§ï¿½ï¿½
 		Box2d box;
 
 		for (auto pnt : pointset) {
@@ -672,7 +686,7 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 	bool firstadd = true;
 
 	for (uint eid = 0; eid < packexter.size(); ++eid) {
-		//¸öÊýÐ¡ÓÚ3µÄ¾Í²»´¦Àí
+		//ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½3ï¿½Ä¾Í²ï¿½ï¿½ï¿½ï¿½ï¿½
 		if (gloEwires[eid].vertex.size() < 3) {
 			//PackNoPlane(packexter[eid], mesh, gloEwires[eid]);
 			//continue;
@@ -698,7 +712,7 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 			getScaleBox(mesh, ewire.vertex, newcentroid, scalebox, normal, finalyaxis, finalzaxis);
 		}
 		else {
-			//ÐèÒª¶îÍâµÄµã¹¹³ÉÆ½Ãæ
+			//ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Äµã¹¹ï¿½ï¿½Æ½ï¿½ï¿½
 			fitPlane(mesh, tempgeo.extraVertex, centroid, normal);
 			globox = getYZAxis(mesh, tempgeo.extraVertex, normal, finalyaxis, finalzaxis, 15.0 / 180.0 * PI, centroid);
 			newcentroid = centroid + (globox.maxy + globox.miny) / 2.0f * finalyaxis + (globox.maxz + globox.minz) / 2.0f * finalzaxis;
@@ -717,7 +731,7 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 		//Eigen::AngleAxisd rotationY(eulerXYZ[1], Eigen::Vector3d::UnitY());
 		//Eigen::AngleAxisd rotationZ(eulerXYZ[2], Eigen::Vector3d::UnitZ());
 		//Eigen::Matrix3d newrotationMatrix = rotationX.matrix() * rotationY.matrix() * rotationZ.matrix();
-		//Ïàµ±ÓÚÒ»¸öreverse rotation matrix
+		//ï¿½àµ±ï¿½ï¿½Ò»ï¿½ï¿½reverse rotation matrix
 
 		//	x - axis
 		//  y - axis  --> transpose --> newratationmatrix (x*y*z)
@@ -737,7 +751,7 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 	}
 
 	for (uint iid = 0; iid < packinter.size(); ++iid) {
-		//¸öÊýÐ¡ÓÚ3µÄ¾Í²»´¦Àí
+		//ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½3ï¿½Ä¾Í²ï¿½ï¿½ï¿½ï¿½ï¿½
 		if (targets[iid].InternalLW.vertex.size() < 3) {
 			//PackNoPlane(packinter[iid], mesh, targets[iid].InternalLW);
 			//continue;
@@ -763,7 +777,7 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 			getScaleBox(mesh, ewire.vertex, newcentroid, scalebox, normal, finalyaxis, finalzaxis);
 		}
 		else {
-			//ÐèÒª¶îÍâµÄµã¹¹³ÉÆ½Ãæ
+			//ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Äµã¹¹ï¿½ï¿½Æ½ï¿½ï¿½
 			fitPlane(mesh, tempgeo.extraVertex, centroid, normal);
 			globox = getYZAxis(mesh, tempgeo.extraVertex, normal, finalyaxis, finalzaxis, 15.0 / 180.0 * PI, centroid);
 			newcentroid = centroid + (globox.maxy + globox.miny) / 2.0f * finalyaxis + (globox.maxz + globox.minz) / 2.0f * finalzaxis;
@@ -784,14 +798,14 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 	}
 	
 
-	//Ê¹ÓÃ8-bit½« eulerxyz --> Ó³Éäµ½¶ÔÓ¦µÄ 0-2PIÖµÓò
+	//Ê¹ï¿½ï¿½8-bitï¿½ï¿½ eulerxyz --> Ó³ï¿½äµ½ï¿½ï¿½Ó¦ï¿½ï¿½ 0-2PIÖµï¿½ï¿½
 	UcharRadGen();
 
 	//for (uint eid = 0; eid < gloEwires.size(); ++eid)
 	//	if(packexter[eid].needtransform == true)
 	//		NewSimpleCheck(packexter[eid], mesh, gloEwires[eid].vertex);
 
-	//translationÖ±½ÓÈ·¶¨ºÃÒ»µã£¬¾Í°´ÕÕÔ­À´µÄ½øÐÐÁ¿»¯
+	//translationÖ±ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ã£¬ï¿½Í°ï¿½ï¿½ï¿½Ô­ï¿½ï¿½ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	TranslatePack(mesh, MeshTransBox);
 
 	FinalScaleGen(mesh);
@@ -928,7 +942,7 @@ void NewLWGenerator::PackGPULW(const MyMesh& mesh)
 			cnt++;
 		}
 
-		assert(targets[mid].ewireidx.size() <= 15);//Õâ¸ö¹ØÏµµ½mesh shaderÀïÃæ¿ªµÄewireÊý×é
+		assert(targets[mid].ewireidx.size() <= 15);//ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½mesh shaderï¿½ï¿½ï¿½æ¿ªï¿½ï¿½ewireï¿½ï¿½ï¿½ï¿½
 	}
 
 	for (uint mid = 0; mid < targets.size(); ++mid) {
@@ -981,7 +995,7 @@ void NewLWGenerator::PackFinalLaceWire(const MyMesh& mesh)
 	//pack inter geo
 	for (uint mid = 0; mid < targets.size(); ++mid) {
 
-		if (mid == 61)
+		if (mid == 51)
 			std::cout << "debug";
 
 		auto& intermesh = targets[mid].InternalLW;
@@ -1087,7 +1101,7 @@ void NewLWGenerator::PackFinalLaceWire(const MyMesh& mesh)
 			cnt++;
 		}
 
-		assert(targets[mid].ewireidx.size() <= 15);//Õâ¸ö¹ØÏµµ½mesh shaderÀïÃæ¿ªµÄewireÊý×é
+		assert(targets[mid].ewireidx.size() <= 15);//ï¿½ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½mesh shaderï¿½ï¿½ï¿½æ¿ªï¿½ï¿½ewireï¿½ï¿½ï¿½ï¿½
 	}
 
 	for (uint mid = 0; mid < targets.size(); ++mid) {
@@ -1158,7 +1172,7 @@ void NewLWGenerator::BitSortGen(int highestnum = 30, int minvalue = 2)
 
 void NewLWGenerator::VertexBitGen(const MyMesh& mesh,float errorpercent)
 {
-	//Ê¹ÓÃ meshtranslationÖÐµÄÊý¾ÝÀ´×÷ÎªÒ»¸ö±ê×¼
+	//Ê¹ï¿½ï¿½ meshtranslationï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªÒ»ï¿½ï¿½ï¿½ï¿½×¼
 	float xerror = (MeshTransBox.maxx - MeshTransBox.minx) * errorpercent;
 	float yerror = (MeshTransBox.maxy - MeshTransBox.miny) * errorpercent;
 	float zerror = (MeshTransBox.maxz - MeshTransBox.minz) * errorpercent;
@@ -1456,10 +1470,10 @@ void NewLWGenerator::CheckByDequantize(const MyMesh& mesh)
 			//assert(result.y() < 1.001);
 			//assert(result.z() < 1.001);
 
-			//ÓÉÓÚscaleÃ¿Ò»¸öÔªËØÍ¨¹ý8bit±íÊ¾ 1·ûºÅÎ»7ÊýÖµÎ»
-			std::cout<<"²î¾àÊÇ " << (dequandata - rawdata).norm() << std::endl;
+			//ï¿½ï¿½ï¿½ï¿½scaleÃ¿Ò»ï¿½ï¿½Ôªï¿½ï¿½Í¨ï¿½ï¿½8bitï¿½ï¿½Ê¾ 1ï¿½ï¿½ï¿½ï¿½Î»7ï¿½ï¿½ÖµÎ»
+			std::cout<<"ï¿½ï¿½ï¿½ï¿½ï¿½ " << (dequandata - rawdata).norm() << std::endl;
 			if ((dequandata - rawdata).norm() > MINREQUIRE) {
-				std::cout << "debug ÐèÒª·Å´óscale elemµÄ·Å´óÂÊ" << std::endl;
+				std::cout << "debug ï¿½ï¿½Òªï¿½Å´ï¿½scale elemï¿½Ä·Å´ï¿½ï¿½ï¿½" << std::endl;
 				assert(false);
 			}
 		}
@@ -1516,10 +1530,10 @@ void NewLWGenerator::CheckByDequantize(const MyMesh& mesh)
 			//assert(result.y() < 1.001);
 			//assert(result.z() < 1.001);
 
-			//ÓÉÓÚscaleÃ¿Ò»¸öÔªËØÍ¨¹ý8bit±íÊ¾ 1·ûºÅÎ»7ÊýÖµÎ»
-			//std::cout << "²î¾àÊÇ " << (dequandata - rawdata).norm() << std::endl;
+			//ï¿½ï¿½ï¿½ï¿½scaleÃ¿Ò»ï¿½ï¿½Ôªï¿½ï¿½Í¨ï¿½ï¿½8bitï¿½ï¿½Ê¾ 1ï¿½ï¿½ï¿½ï¿½Î»7ï¿½ï¿½ÖµÎ»
+			//std::cout << "ï¿½ï¿½ï¿½ï¿½ï¿½ " << (dequandata - rawdata).norm() << std::endl;
 			//if ((dequandata - rawdata).norm() > MINREQUIRE) {
-			//	std::cout << "debug ÐèÒª·Å´óscale elemµÄ·Å´óÂÊ" << std::endl;
+			//	std::cout << "debug ï¿½ï¿½Òªï¿½Å´ï¿½scale elemï¿½Ä·Å´ï¿½ï¿½ï¿½" << std::endl;
 			//	assert(false);
 			//}
 		}
@@ -1572,7 +1586,7 @@ void NewLWGenerator::FinalScaleGen(const MyMesh& mesh)
 		xvalues.push_back(tempx*GREATERSCALEELEM); yvalues.push_back(tempy * GREATERSCALEELEM); zvalues.push_back(tempz * GREATERSCALEELEM);
 		//std::cout << "ewire " << eid << " " << tempx << " " << tempy << " " << tempz << std::endl;
 
-		//ÈçºÎ scale elem¹ýÓÚÐ¡µÄ»°Ê¹ÓÃÖ¸Êý±íÊ¾ÓÐÒ»¶¨¾«¶ÈÎÊÌâ
+		//ï¿½ï¿½ï¿½ scale elemï¿½ï¿½ï¿½ï¿½Ð¡ï¿½Ä»ï¿½Ê¹ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		assert((tempx > SCALEXELEMMIN) && (tempy > SCALEXELEMMIN) && (tempz > SCALEXELEMMIN));
 	}
 
@@ -1617,9 +1631,9 @@ void NewLWGenerator::FinalScaleGen(const MyMesh& mesh)
 	}
 
 
-	//ÓÉÓÚÒýÈëÁËÎó²îµÄÔ­Òò£¬·´¶øÎÊÌâÃ»ÄÇÃ´´óÁË
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ò£¬·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½
 	MeshScaleBox = UnitBox{ xvalues.front(),yvalues.front(),zvalues.front(),xvalues.front(),yvalues.front(),zvalues.front() };
-	//pack ²¿·Ö
+	//pack ï¿½ï¿½ï¿½ï¿½
 	for (auto elem : xvalues) {
 		if (elem > MeshScaleBox.maxx)MeshScaleBox.maxx = elem;
 	}
@@ -1756,7 +1770,7 @@ void NewLWGenerator::LimitEigen(Eigen::Vector3d& vec)
 	if (vec.z() > 1.0)vec.z() = 1.0;
 }
 
-// float*3 ÔÚ¸Ã¾«¶ÈÖ®ÏÂ¾ßÌå»á±ä³ÉÊ²Ã´Öµ
+// float*3 ï¿½Ú¸Ã¾ï¿½ï¿½ï¿½Ö®ï¿½Â¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê²Ã´Öµ
 // -1.0 --> 1.0  map to  0 --> 2^num-1
 // 0.0 --> 2.0 map to  0 --> 2^num-1
 
@@ -1768,7 +1782,7 @@ Eigen::Vector3d NewLWGenerator::cutfloatByBit(Eigen::Vector3d rawvalue, uint xnu
 	uint yhigh = (1 << ynum) - 1;
 	uint zhigh = (1 << znum) - 1;
 
-	float x = std::round((rawvalue.x()+1)/2.0 * xhigh);//value ¶ÔÓ¦uintÖµ
+	float x = std::round((rawvalue.x()+1)/2.0 * xhigh);//value ï¿½ï¿½Ó¦uintÖµ
 	float y = std::round((rawvalue.y()+1)/2.0 * yhigh);
 	float z = std::round((rawvalue.z()+1)/2.0 * zhigh);
 	auto result = Eigen::Vector3d{
@@ -1784,7 +1798,7 @@ void NewLWGenerator::GEObitflowPack()
 		
 		//<3
 		if (tempgeo.needtransform == false) {
-			//´úÂëÐÞ¸ÄÖ®ºóÕâ²¿·Ö ewire needtranform×ÜÊÇ true
+			//ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½Ö®ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ ewire needtranformï¿½ï¿½ï¿½ï¿½ true
 			assert(false);
 			//assert(gloEwires[eid].vertex.size() < 3);
 
@@ -1878,7 +1892,7 @@ void NewLWGenerator::InsertGeoValue(std::vector<uint>& bitflow, uint startidx, u
 	uint endidx = startidx + length;
 
 	//[startidx,endidx)
-	//´ÓµÍÎ»µ½¸ßÎ»¿ªÊ¼¸²Ð´
+	//ï¿½Óµï¿½Î»ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½Ê¼ï¿½ï¿½Ð´
 	if ((endidx-1) / 32 == startidx / 32) {
 		uint& value = bitflow[startidx / 32];
 		uint offset = startidx % 32;
@@ -1922,14 +1936,14 @@ void NewLWGenerator::ExportFile(const std::string& filename)
 		std::ofstream file;
 		file.open(DesLocfilename, std::ios::binary);
 		if (!file.is_open()) {
-			std::cerr << "ÎÞ·¨´ò¿ªÎÄ¼þ£º" << DesLocfilename << std::endl;
+			std::cerr << "ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½" << DesLocfilename << std::endl;
 			return;
 		}
 
-		// Ð´ÈëÏòÁ¿´óÐ¡
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
 		size_t size = DesLoc.size();
 		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
-		// Ð´ÈëÏòÁ¿Êý¾Ý
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		file.write(reinterpret_cast<const char*>(DesLoc.data()), size * sizeof(uint));
 
 		file.close();
@@ -1939,14 +1953,14 @@ void NewLWGenerator::ExportFile(const std::string& filename)
 		std::ofstream file;
 		file.open(Desinfofilename, std::ios::binary);
 		if (!file.is_open()) {
-			std::cerr << "ÎÞ·¨´ò¿ªÎÄ¼þ£º" << Desinfofilename << std::endl;
+			std::cerr << "ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½" << Desinfofilename << std::endl;
 			return;
 		}
 
-		// Ð´ÈëÏòÁ¿´óÐ¡
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
 		size_t size = Desinfo.size();
 		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
-		// Ð´ÈëÏòÁ¿Êý¾Ý
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		file.write(reinterpret_cast<const char*>(Desinfo.data()), size * sizeof(uint));
 
 		file.close();
@@ -1955,14 +1969,14 @@ void NewLWGenerator::ExportFile(const std::string& filename)
 		std::ofstream file;
 		file.open(newinterconfilename, std::ios::binary);
 		if (!file.is_open()) {
-			std::cerr << "ÎÞ·¨´ò¿ªÎÄ¼þ£º" << newinterconfilename << std::endl;
+			std::cerr << "ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½" << newinterconfilename << std::endl;
 			return;
 		}
 
-		// Ð´ÈëÏòÁ¿´óÐ¡
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
 		size_t size = newintercon.size();
 		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
-		// Ð´ÈëÏòÁ¿Êý¾Ý
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		file.write(reinterpret_cast<const char*>(newintercon.data()), size * sizeof(uint));
 
 		file.close();
@@ -1971,14 +1985,14 @@ void NewLWGenerator::ExportFile(const std::string& filename)
 		std::ofstream file;
 		file.open(newexterconfilename, std::ios::binary);
 		if (!file.is_open()) {
-			std::cerr << "ÎÞ·¨´ò¿ªÎÄ¼þ£º" << newexterconfilename << std::endl;
+			std::cerr << "ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½" << newexterconfilename << std::endl;
 			return;
 		}
 
-		// Ð´ÈëÏòÁ¿´óÐ¡
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
 		size_t size = newextercon.size();
 		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
-		// Ð´ÈëÏòÁ¿Êý¾Ý
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		file.write(reinterpret_cast<const char*>(newextercon.data()), size * sizeof(uint));
 
 		file.close();
@@ -1987,14 +2001,14 @@ void NewLWGenerator::ExportFile(const std::string& filename)
 		std::ofstream file;
 		file.open(intergeofilename, std::ios::binary);
 		if (!file.is_open()) {
-			std::cerr << "ÎÞ·¨´ò¿ªÎÄ¼þ£º" << intergeofilename << std::endl;
+			std::cerr << "ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½" << intergeofilename << std::endl;
 			return;
 		}
 
-		// Ð´ÈëÏòÁ¿´óÐ¡
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
 		size_t size = intergeo.size();
 		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
-		// Ð´ÈëÏòÁ¿Êý¾Ý
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		file.write(reinterpret_cast<const char*>(intergeo.data()), size * sizeof(float));
 
 		file.close();
@@ -2003,14 +2017,14 @@ void NewLWGenerator::ExportFile(const std::string& filename)
 		std::ofstream file;
 		file.open(extergeofilename, std::ios::binary);
 		if (!file.is_open()) {
-			std::cerr << "ÎÞ·¨´ò¿ªÎÄ¼þ£º" << extergeofilename << std::endl;
+			std::cerr << "ï¿½Þ·ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½" << extergeofilename << std::endl;
 			return;
 		}
 
-		// Ð´ÈëÏòÁ¿´óÐ¡
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
 		size_t size = extergeo.size();
 		file.write(reinterpret_cast<const char*>(&size), sizeof(size));
-		// Ð´ÈëÏòÁ¿Êý¾Ý
+		// Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		file.write(reinterpret_cast<const char*>(extergeo.data()), size * sizeof(float));
 
 		file.close();
@@ -2056,7 +2070,7 @@ void UnitBox::refresh(float xvalue, float yvalue, float zvalue)
 }
 
 void NewLWGenerator::printBits(uint32_t value) {
-	uint32_t mask = 1 << 31;  // ´Ó×î¸ßÎ»¿ªÊ¼
+	uint32_t mask = 1 << 31;  // ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½Ê¼
 
 	for (int i = 0; i < 32; i++) {
 		bool bit = (value & mask) != 0;
@@ -2151,7 +2165,7 @@ float NewLWGenerator::ReadFloat(const std::vector<uint>& geobits, uint startidx,
 void NewLWGenerator::PackExtraPnts(PackGEO& tempgeo, const MyMesh& mesh, const std::vector<uint>& vertices)
 {
 	if (vertices[0] == EMPTYWIRE)return;
-	//ÕÒ¹²Ïíµã
+	//ï¿½Ò¹ï¿½ï¿½ï¿½ï¿½ï¿½
 
 	tempgeo.NeedExtraPnt = true;
 	if (vertices.size() == 2) {
@@ -2176,7 +2190,7 @@ void NewLWGenerator::PackExtraPnts(PackGEO& tempgeo, const MyMesh& mesh, const s
 				return;
 			}
 		}
-		//internalwire»á³öÏÖÁ½¸ö²»ÏàÁÚµÄµã
+		//internalwireï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÚµÄµï¿½
 		tempgeo.extraVertex.push_back(*pntsaround.begin());
 		assert(tempgeo.extraVertex.size() == 3);
 		return;
@@ -2204,7 +2218,7 @@ void NewLWGenerator::ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequa
 						float(tempgeo.rotatx) / 255.0 * TWOPI,
 						float(tempgeo.rotaty) / 255.0 * TWOPI,
 						float(tempgeo.rotatz) / 255.0 * TWOPI
-	};
+			};
 	Eigen::AngleAxisd rotationX(eulerXYZ[0], Eigen::Vector3d::UnitX());
 	Eigen::AngleAxisd rotationY(eulerXYZ[1], Eigen::Vector3d::UnitY());
 	Eigen::AngleAxisd rotationZ(eulerXYZ[2], Eigen::Vector3d::UnitZ());
@@ -2221,7 +2235,16 @@ void NewLWGenerator::ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequa
 
 	Eigen::DiagonalMatrix<double, 3> scalema;
 	scalema.diagonal() << descalex, descaley, descalez;
+
+	std::cout << rotationX.matrix() <<std::endl<< rotationY.matrix()<<std::endl << rotationZ.matrix();
+
+	std::cout << rotationX.matrix() * rotationY.matrix() << std::endl;
+
+
+	std::cout << rotationMatrix.matrix() << std::endl;
+	std::cout<<scalema.toDenseMatrix()<<std::endl;
 	dequanmatrix = rotationMatrix * scalema;
+	std::cout << dequanmatrix << std::endl;
 }
 
 uint NewLWGenerator::AnaUint(uint value, uint seq)

@@ -233,6 +233,8 @@ namespace glfwviewer {
 		void LoadInternalWire(const MyMesh& mesh, const NewLWGenerator& nlwn);
 		void LoadNormalLine(const NewCluster& nclu);
 		void LoadPoints(const MyMesh& mesh);
+		void LoadPoints(const NewLWGenerator& nlwn);
+
 		void LoadLines(const MyMesh& mesh,Meshlets meshlet);
 
 

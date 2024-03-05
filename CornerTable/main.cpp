@@ -58,7 +58,7 @@ int main()
         meshlets = nclu.oldmeshlets;
 
 
-        int flag = 1;
+        int flag = 3;
         glfwviewer::Viewer myview;
         myview.initGLFW();
         glfwviewer::Scene myscene;
@@ -67,7 +67,7 @@ int main()
 
         if (flag == 0) {
             myscene.LoadSCMeshlet(mesh, meshlets);
-            //myscene.LoadPoints(mesh);
+            myscene.LoadPoints(mesh);
             //myscene.LoadInternalWire(mesh, nlwgen);
             //myscene.LoadLaceWire(mesh, nclu);
             //myscene.LoadNormalLine(nclu);
@@ -81,7 +81,7 @@ int main()
             {
                 myview.processinput();
                 myview.RenderSCML();
-                //myview.RenderPoint();
+                myview.RenderPoint();
                 //myview.RenderNormalLine();
                 //myview.RenderWireLine();
                 //myview.RenderNormalLine();
@@ -96,6 +96,11 @@ int main()
             NewLWGenerator nlwgen(nclu);
             nlwgen.FUNC(mesh,flag);
             myscene.LoadSimpleWireMeshlet(nlwgen);
+
+            myscene.LoadPoints(nlwgen);
+
+
+
             //myscene.LoadInternalWire(mesh, nlwgen);
             myscene.LoadLaceWire(mesh, nclu);
             myview.set(&myscene);
@@ -107,6 +112,10 @@ int main()
                 myview.processinput();
                 myview.RenderSWML();
                 myview.RenderWireLine();
+
+                myview.RenderPoint();
+
+
                 //myview.RenderInterWire();
                 glfwSwapBuffers(myview.MYwindow());
                 glfwPollEvents();

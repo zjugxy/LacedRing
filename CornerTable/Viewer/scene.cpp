@@ -254,10 +254,11 @@ namespace glfwviewer {
 
     void Scene::LoadPoints(const MyMesh& mesh)
     {
-        auto vh = mesh.vertex_handle(6569);
-        auto pnt = mesh.point(vh);
-        pointobj.points.emplace_back(pnt[0], pnt[1],pnt[2]);
-
+        for (uint i = 0; i < mesh.n_vertices(); ++i) {
+            auto vh = mesh.vertex_handle(i);
+            auto pnt = mesh.point(vh);
+            pointobj.points.emplace_back(pnt[0], pnt[1], pnt[2]);
+        }
 
         glGenVertexArrays(1, &pointobj.VAO);
         glGenBuffers(1, &pointobj.VBO);
@@ -267,6 +268,21 @@ namespace glfwviewer {
         glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * pointobj.points.size(), pointobj.points.data(), GL_STATIC_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
+    }
+
+    void Scene::LoadPoints(const NewLWGenerator& nlwn)
+    {
+        pointobj.points = nlwn.debugpnts;
+
+        glGenVertexArrays(1, &pointobj.VAO);
+        glGenBuffers(1, &pointobj.VBO);
+
+        glBindVertexArray(pointobj.VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, pointobj.VBO);
+        glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float) * pointobj.points.size(), pointobj.points.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
     }
 
     void Scene::LoadLines(const MyMesh& mesh,Meshlets meshlets)
@@ -692,8 +708,10 @@ namespace glfwviewer {
     void Scene::renderPoints()
     {
         glBindVertexArray(pointobj.VAO);
-        glPointSize(20.0f);
+        glPointSize(5.0f);
         glDrawArrays(GL_POINTS, 0, pointobj.points.size());
+        glBindVertexArray(0);
+
     }
 
     void Scene::renderTSML()
