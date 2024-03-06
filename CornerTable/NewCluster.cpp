@@ -573,7 +573,7 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 
 	int zerocnt = 0;
 	for (auto& meshlet : mymeshlets) {
-		std::cout << meshlet.faces.size() << std::endl;
+		//std::cout << meshlet.faces.size() << std::endl;
 		if (meshlet.faces.size() == 0)
 			zerocnt++;
 	}
@@ -589,9 +589,12 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 		zerocnt -= idx;
 
 	}
+	std::cout << "cnt start " << mymeshlets.size() << std::endl;
+	for (auto meshlet : mymeshlets)
+		std::cout << meshlet.faces.size() << std::endl;
 
 
-
+#ifndef NDEBUG
 	for (auto meshlet : mymeshlets) {
 		if (meshlet.faces.empty())continue;
 		int facenum = meshlet.faces.size();
@@ -616,7 +619,7 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 		}
 		assert(tempset.size() == meshlet.faces.size());
 	}
-
+#endif
 
 
 }

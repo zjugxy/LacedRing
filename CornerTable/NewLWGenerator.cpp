@@ -377,15 +377,8 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 		auto& intermeshlet = meshlet.InternalLW;
 
 		geoinfo.resize(vertexbegin + vidxmap.size());
-		//for (auto& elem : vidxmap) {
-		//	auto vh = mesh.vertex_handle(elem.first);
-		//	auto pnt = mesh.point(vh);
-		//	geoinfo[vertexbegin + elem.second] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
-		//}
 
 
-		if (mid == 51)
-			std::cout << "debug";
 
 		uint vcnt = 0;
 
@@ -396,13 +389,7 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 				auto& tempgeo = packinter[mid];
 				if (tempgeo.needtransform == false) {
 					assert(targets[mid].InternalLW.vertex[0] == EMPTYWIRE);
-					//for (int i = 0; i < tempgeo.geobitflow.size(); i += 3) {
-					//	float x = *reinterpret_cast<float*>(&tempgeo.geobitflow[i]);
-					//	float y = *reinterpret_cast<float*>(&tempgeo.geobitflow[i + 1]);
-					//	float z = *reinterpret_cast<float*>(&tempgeo.geobitflow[i + 2]);
-					//	geoinfo[vertexbegin + vcnt] = vec4{ x,y,z,1.0 };
-					//	vcnt++;
-					//}
+
 				}
 				else {
 
@@ -411,8 +398,6 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 
 					ParseTempGeo(tempgeo, dequanmatrix, tranvec);
 
-					std::cout << dequanmatrix << std::endl;
-					std::cout << tranvec[0] << " " << tranvec[1] << " " << tranvec[2] << std::endl;
 					uint pntlength = tempgeo.xnum + tempgeo.ynum + tempgeo.znum;
 
 					for (int i = 0; i < targets[mid].InternalLW.vertex.size(); ++i) {
@@ -421,9 +406,6 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 						//auto cmpvalue = mesh.point(mesh.vertex_handle(targets[mid].InternalLW.vertex[i]));
 						//Eigen::Vector3d cmpvec{ cmpvalue[0],cmpvalue[1],cmpvalue[2] };
 						geoinfo[vertexbegin + vcnt] = vec4{ pnt[0],pnt[1],pnt[2],1.0 };
-						if(mid==51)
-							debugpnts.emplace_back(pnt[0], pnt[1], pnt[2]);
-
 						vcnt++;
 					}
 				}
@@ -553,12 +535,12 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 					priminfo.push_back(ivertexnum + (idxstart + i + 1) % evertexnum);
 					priminfo.push_back(ewire.left[i]);
 
-					if ((ivertexnum + (idxstart + i) % evertexnum) != vidxmap[ewire.vertex[i]])
-						std::cout << "mid " << mid << " " << (uint)(ivertexnum + (idxstart + i) % evertexnum)
-						<< " " << (uint)(vidxmap[ewire.vertex[i]]) << std::endl;
-					if ((ivertexnum + (idxstart + i+1) % evertexnum) != vidxmap[ewire.vertex[i+1]])
-						std::cout << "mid " << mid << " " << (ivertexnum + (idxstart + i+1) % evertexnum)
-						<< " " << (uint)(vidxmap[ewire.vertex[i+1]]) << std::endl;
+					//if ((ivertexnum + (idxstart + i) % evertexnum) != vidxmap[ewire.vertex[i]])
+					//	std::cout << "mid " << mid << " " << (uint)(ivertexnum + (idxstart + i) % evertexnum)
+					//	<< " " << (uint)(vidxmap[ewire.vertex[i]]) << std::endl;
+					//if ((ivertexnum + (idxstart + i+1) % evertexnum) != vidxmap[ewire.vertex[i+1]])
+					//	std::cout << "mid " << mid << " " << (ivertexnum + (idxstart + i+1) % evertexnum)
+					//	<< " " << (uint)(vidxmap[ewire.vertex[i+1]]) << std::endl;
 				}
 			}
 			else {
@@ -567,12 +549,12 @@ void NewLWGenerator::PackSimpleLaceWire(const MyMesh& mesh)
 					priminfo.push_back(ivertexnum + (idxstart + i +1) % evertexnum);
 					priminfo.push_back(ewire.right[ewire.vertex.size() -1 -i]);
 
-					if ((ivertexnum + (idxstart + i) % evertexnum) != vidxmap[ewire.vertex[ewire.vertex.size() - 1 - i]])
-						std::cout <<"mid "<<mid<< " " << ivertexnum + (idxstart + i) % evertexnum
-						<< " "<< uint(vidxmap[ewire.vertex[ewire.vertex.size() - 1 - i]]) << std::endl;
-					if ((ivertexnum + (idxstart + i + 1) % evertexnum) != vidxmap[ewire.vertex[ewire.vertex.size() - 1 - i - 1]])
-						std::cout << "mid " << mid << " " << ivertexnum + (idxstart + i+1) % evertexnum
-						<< " " << uint(vidxmap[ewire.vertex[ewire.vertex.size() - 2 - i]]) << std::endl;
+					//if ((ivertexnum + (idxstart + i) % evertexnum) != vidxmap[ewire.vertex[ewire.vertex.size() - 1 - i]])
+					//	std::cout <<"mid "<<mid<< " " << ivertexnum + (idxstart + i) % evertexnum
+					//	<< " "<< uint(vidxmap[ewire.vertex[ewire.vertex.size() - 1 - i]]) << std::endl;
+					//if ((ivertexnum + (idxstart + i + 1) % evertexnum) != vidxmap[ewire.vertex[ewire.vertex.size() - 1 - i - 1]])
+					//	std::cout << "mid " << mid << " " << ivertexnum + (idxstart + i+1) % evertexnum
+					//	<< " " << uint(vidxmap[ewire.vertex[ewire.vertex.size() - 2 - i]]) << std::endl;
 				}
 			}
 			idxstart += ewire.vertex.size() - 1;
@@ -1451,14 +1433,14 @@ void NewLWGenerator::CheckByDequantize(const MyMesh& mesh)
 			tempgeo.datatocompress.push_back(result);
 			Eigen::Vector3d dequandata = dequanmatrix * result + tranvec;
 
-			//assert(result.x() < 1.001);
-			//assert(result.y() < 1.001);
-			//assert(result.z() < 1.001);
+			assert(std::abs(result.x()) < 1.001);
+			assert(std::abs(result.y()) < 1.001);
+			assert(std::abs(result.z()) < 1.001);
 
-			//����scaleÿһ��Ԫ��ͨ��8bit��ʾ 1����λ7��ֵλ
-			std::cout<<"����� " << (dequandata - rawdata).norm() << std::endl;
+
+			//std::cout<<"差距是" << (dequandata - rawdata).norm() << std::endl;
 			if ((dequandata - rawdata).norm() > MINREQUIRE) {
-				std::cout << "debug ��Ҫ�Ŵ�scale elem�ķŴ���" << std::endl;
+				std::cout << "debug " << std::endl;
 				assert(false);
 			}
 		}
@@ -1783,18 +1765,7 @@ void NewLWGenerator::GEObitflowPack()
 		
 		//<3
 		if (tempgeo.needtransform == false) {
-			//�����޸�֮���ⲿ�� ewire needtranform���� true
 			assert(false);
-			//assert(gloEwires[eid].vertex.size() < 3);
-
-			//for (auto pnt : tempgeo.nopackgeo) {
-			//	uint uintvalue = *reinterpret_cast<uint*>(&pnt.x);
-			//	tempgeo.geobitflow.push_back(uintvalue);
-			//	uintvalue = *reinterpret_cast<uint*>(&pnt.y);
-			//	tempgeo.geobitflow.push_back(uintvalue);
-			//	uintvalue = *reinterpret_cast<uint*>(&pnt.z);
-			//	tempgeo.geobitflow.push_back(uintvalue);
-			//}
 		}
 		else {
 			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.rotatx, tempgeo.rotaty, tempgeo.rotatz, tempgeo.translatex));
@@ -1852,9 +1823,24 @@ void NewLWGenerator::GEObitflowPack()
 			}
 		}
 
-
-
 	}
+
+	int lacewirecnt = packinter.size() + packexter.size();
+	uint xcnt = 0, ycnt = 0, zcnt = 0;
+
+	for (auto pack : packinter) {
+		xcnt += pack.xnum;
+		ycnt += pack.ynum;
+		zcnt += pack.znum;
+	}
+	
+	for (auto pack : packexter) {
+		xcnt += pack.xnum;
+		ycnt += pack.ynum;
+		zcnt += pack.znum;
+	}
+
+	std::cout << float(xcnt) / lacewirecnt << " " << float(ycnt) / lacewirecnt << " " << float(zcnt) / lacewirecnt << " " << std::endl;
 
 }
 
@@ -2094,8 +2080,7 @@ float NewLWGenerator::ReadFloat(const std::vector<uint>& geobits, uint startidx,
 		uint high = (1 << num) - 1;
 		float ret = float(value) / high * 2.0 - 1.0;
 
-		if (abs(ret) > 2.0)
-			std::cout << "debug" << std::endl;
+
 		return ret;
 	}
 
@@ -2175,13 +2160,6 @@ void NewLWGenerator::ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequa
 	Eigen::DiagonalMatrix<double, 3> scalema;
 	scalema.diagonal() << descalex, descaley, descalez;
 
-	std::cout << rotationX.matrix() <<std::endl<< rotationY.matrix()<<std::endl << rotationZ.matrix();
-
-	std::cout << rotationX.matrix() * rotationY.matrix() << std::endl;
-
-
-	std::cout << rotationMatrix.matrix() << std::endl;
-	std::cout<<scalema.toDenseMatrix()<<std::endl;
 	dequanmatrix = rotationMatrix * scalema;
-	std::cout << dequanmatrix << std::endl;
+
 }

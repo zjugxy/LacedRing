@@ -164,7 +164,7 @@ int main()
                 myview.processinput();
 
                 myview.RenderFinalLaceWireMesh(nlwgen.uniformMeshGlodata);
-                myview.RenderWireLine();
+               // myview.RenderWireLine();
 
                 glfwSwapBuffers(myview.MYwindow());
                 glfwPollEvents();

@@ -1,7 +1,7 @@
 #version 450 core
 #extension GL_NV_mesh_shader : require
 #define GROUP_SIZE 32
-#define MEM_LOCAT 32
+#define MEM_LOCAT 16
 
 #define WIREEND 0xFF
 #define EMPTYWIRE 0xFFFFFFFF
@@ -332,7 +332,7 @@ void main(){
         uint geoloc = (DesInfo[start+2+ingeostart+wireid]);
         vec4 vergeo = ParseExterPnt(wireid+1,96+(vertexid*pntlength[wireid+1]),geoloc);
         gl_MeshVerticesNV[i+threadid+intergeonum].gl_Position = projection*view*model*vergeo;
-        v_out[i+threadid+intergeonum].color = vec3(1.0,1.0,1.0);
+        v_out[i+threadid+intergeonum].color =meshletcolor;
 	}
 
 
