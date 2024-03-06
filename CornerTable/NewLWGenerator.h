@@ -170,7 +170,7 @@ private:
 
 	void PackGPULW(const MyMesh& mesh);
 
-	void PackFinalLaceWire(const MyMesh& mesh);
+	void PackFinalLaceWire();
 
 	void BitSortGen(int highestnum,int minvalue);
 	void VertexBitGen(const MyMesh& mesh,float errorpercent);
@@ -204,25 +204,11 @@ private:
 
 
 	Eigen::Vector3d ReadData(const std::vector<uint>& geobits, uint startidx, uint xnum, uint ynum, uint znum);
-	
-	Eigen::Vector3d GLSLReadData(const std::vector<uint>& geobits, uint startidx, uint xnum, uint ynum, uint znum);
 	float ReadFloat(const std::vector<uint>& geobits, uint startidx, uint num);
 
 	void PackExtraPnts(PackGEO& tempgeo, const MyMesh& mesh,const std::vector<uint>& vertices);
 
 
 	void ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequanmatrix, Eigen::Vector3d& tranvec);
-
-	uint AnaUint(uint value, uint seq);
-
-	Eigen::Vector3d ParseInterPnt(Eigen::Matrix3d& dequanmat, Eigen::Vector3d& tranvec, uint startidx, uint startloc,
-		uint pntlength,uint tempxnum,uint tempynum,uint tempznum);
-
-	Eigen::Matrix3d rotateX(float angle);
-	Eigen::Matrix3d rotateY(float angle);
-	Eigen::Matrix3d rotateZ(float angle);
-
-
-	void FinalCheckOnGEO(const MyMesh& mesh); 
 };
 
