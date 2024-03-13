@@ -81,7 +81,7 @@ int main()
             {
                 myview.processinput();
                 myview.RenderSCML();
-                myview.RenderPoint();
+                //myview.RenderPoint();
                 //myview.RenderNormalLine();
                 //myview.RenderWireLine();
                 //myview.RenderNormalLine();
@@ -137,7 +137,7 @@ int main()
             {
                 myview.processinput();
                 myview.RenderFINALLWML();
-                myview.RenderWireLine();
+                //myview.RenderWireLine();
                 //myview.RenderInterWire();
                 glfwSwapBuffers(myview.MYwindow());
                 glfwPollEvents();

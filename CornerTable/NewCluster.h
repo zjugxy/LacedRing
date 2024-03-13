@@ -81,6 +81,7 @@ private:
 
 	float ComputeScore(const Meshlet_built* curr, const vec3& center, const float radius,
 		const vec3& normal, const std::array<vec3, 3>& tri, const std::array<uint, 3>& triidxs);
+
 	bool IsMeshletFull(const Meshlet_built* curr,const int maxv,const int maxf);
 	
 	void PackOldmeshlets();
@@ -88,7 +89,12 @@ private:
 
 	void DeleteSmallMesh(const MyMesh& mesh);
 
+	void FirstDeleteMesh(const MyMesh& mesh);
+
+	void SimulateAnneal(const MyMesh& mesh,float threshold,float decreaserate,int cntloop);
+
 	uint CalculateVertexCnt(const MyMesh& mesh, uint vidx,const std::vector<uint>& meshletid);
+
 	void BuildEwiresOfSingleMeshlet(EwireBuildSet& buildset, const MyMesh& mesh);
 
 
@@ -135,5 +141,19 @@ private:
 
 	void TestMeshlet(uint meshletid,const MyMesh& mesh);
 
+	void PackBoundTris(const MyMesh& mesh, const Meshlet_built& meshlet, std::vector<uint>& tristopack, uint mid,const std::vector<uint>& facetomeshlet);
+
+	void CalculateNormal(std::map<uint, vec3> normals, vec3& normal);
+
+
+	void EvaluateMeshlet(const MyMesh& mesh);
+
+	float FitsquareEnergy(const std::vector<Eigen::Vector3d>& points, Eigen::Vector3d& normal, Eigen::Vector3d& center);
+
+	float FitsquareEnergy(const std::map<uint, Eigen::Vector3d>& positions, Eigen::Vector3d& normal, Eigen::Vector3d& center);
+
+	float calculateTrianglearea(float a, float b, float c);
+
+	float ComputeSimulateEnergy(float area, float length,const std::map<uint, Eigen::Vector3d>& positions);
 };
 

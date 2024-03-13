@@ -1,6 +1,8 @@
 #include "NewCluster.h"
 #include <Eigen/Dense>
 #include<chrono>
+#include<random>
+
 
 bool CompareScores(const std::pair<uint32_t, float>& a, const std::pair<uint32_t, float>& b);
 
@@ -229,7 +231,15 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh,Meshlets 
 	std::cout << "total meshlets is " << mymeshlets.size() << std::endl;
 	
 	//
+	EvaluateMeshlet(mesh);
 	DeleteSmallMesh(mesh);
+	FirstDeleteMesh(mesh);
+	EvaluateMeshlet(mesh);
+	SimulateAnneal(mesh,0.3334,0.005,200);
+	DeleteSmallMesh(mesh);
+
+	EvaluateMeshlet(mesh);
+
 
 
 	startTime = std::chrono::steady_clock::now();
@@ -362,6 +372,8 @@ float NewCluster::ComputeScore(const Meshlet_built* curr, const vec3& center, co
 
 	return reuseScore * reuseWeight + locWeight * locScore + oriWeight * oriScore;
 }
+
+
 
 bool NewCluster::IsMeshletFull(const Meshlet_built* curr, const int maxv, const int maxf)
 {
@@ -515,7 +527,7 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 	sort(mymeshlets.begin(), mymeshlets.end(), [](const Meshlet_built& mesh1, const Meshlet_built& mesh2) {
 		return mesh1.faces.size() < mesh2.faces.size();
 	});
-	for (auto& meshlet : mymeshlets)std::cout << meshlet.faces.size() << std::endl;
+	//for (auto& meshlet : mymeshlets)std::cout << meshlet.faces.size() << std::endl;
 
 
 
@@ -530,9 +542,9 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 
 	for (int i = 0; i < mymeshlets.size(); ++i) {
 
-		std::cout << "cut meshlet " << i << std::endl;
+		//std::cout << "cut meshlet " << i << std::endl;
 
-		if (mymeshlets[i].vertices.size() > maxv / 3)break;
+		if (mymeshlets[i].vertices.size() > maxv / 6)break;
 		//
 		while (!mymeshlets[i].faces.empty()) {
 			for (auto& singleface : mymeshlets[i].faces) {
@@ -589,9 +601,9 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 		zerocnt -= idx;
 
 	}
-	std::cout << "cnt start " << mymeshlets.size() << std::endl;
-	for (auto meshlet : mymeshlets)
-		std::cout << meshlet.faces.size() << std::endl;
+	//std::cout << "cnt start " << mymeshlets.size() << std::endl;
+	//for (auto meshlet : mymeshlets)
+	//	std::cout << meshlet.faces.size() << std::endl;
 
 
 #ifndef NDEBUG
@@ -620,6 +632,535 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 		assert(tempset.size() == meshlet.faces.size());
 	}
 #endif
+
+
+}
+
+void NewCluster::FirstDeleteMesh(const MyMesh& mesh)
+{
+	sort(mymeshlets.begin(), mymeshlets.end(), [](const Meshlet_built& mesh1, const Meshlet_built& mesh2) {
+		return mesh1.faces.size() < mesh2.faces.size();
+	});
+	//for (auto& meshlet : mymeshlets)std::cout << meshlet.faces.size() << std::endl;
+
+
+
+	std::vector<uint> facetomeshlet(nfaces);
+	for (int i = 0; i < mymeshlets.size(); ++i) {
+		for (auto& f : mymeshlets[i].faces)
+			facetomeshlet[f] = i;
+	}
+	for(uint mid = 0;mid<mymeshlets.size();++mid){
+		auto& meshlet = mymeshlets[mid];
+		//find first boundtri
+		uint starttriid = 0;
+		for (auto& f : meshlet.faces) {
+			auto fh = mesh.face_handle(f);
+			for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+				uint oppfaceid = cffit->idx();
+				if (facetomeshlet[oppfaceid] != mid) {
+					starttriid = f;
+					break;
+				}
+			}
+		}
+		uint starthalfedgeid = 0;
+		{
+			auto tempfh = mesh.face_handle(starttriid);
+			for (auto cfhit = mesh.cfh_iter(tempfh); cfhit.is_valid(); cfhit++) {
+				uint oppfaceid = cfhit->opp().face().idx();
+				if (facetomeshlet[oppfaceid] != mid) {
+					starthalfedgeid = cfhit->idx();
+					break;
+				}
+			}
+		}
+
+		uint nexthalfedge = 0;
+		uint endrecord = starthalfedgeid;
+		int cnt = 0;
+
+		for (auto& f : meshlet.faces) {
+			auto fh = mesh.face_handle(f);
+			for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+				uint oppfaceid = cffit->idx();
+				if (facetomeshlet[oppfaceid] != mid) {
+					cnt++;
+				}
+			}
+		}
+
+
+		while (nexthalfedge != endrecord)
+		{
+			//通过starthalf edge 找到下一个next half edge
+			// 计算夹角
+			cnt--;
+			if (cnt == 0 ) {
+				break;
+			}
+
+			auto starthh = mesh.halfedge_handle(starthalfedgeid);
+			auto vh = mesh.to_vertex_handle(starthh);
+
+			for (auto cvohit = mesh.cvoh_iter(vh); cvohit.is_valid(); ++cvohit) {
+				if(facetomeshlet[cvohit->face().idx()]==mid)
+					if (facetomeshlet[cvohit->opp().face().idx()] != mid) {
+						nexthalfedge = cvohit->idx();
+						break;
+					}
+			}
+			auto nexthh = mesh.halfedge_handle(nexthalfedge);
+
+			auto pnt0 = mesh.point(mesh.from_vertex_handle(starthh));
+			auto pnt1 = mesh.point(vh);
+			auto pnt2 = mesh.point(mesh.to_vertex_handle(nexthh));
+
+			auto edge1 = pnt0 - pnt1;
+			auto edge2 = pnt2 - pnt1;
+
+			double angle = std::acos(dot(normalize(edge1), normalize(edge2)));
+
+			angle = angle * 180.0 / M_PI;
+			//若夹角比较小，判断中间的三角形个数
+			// vertex --> triangle iter 
+			//erase --> 相邻的node
+			std::vector<uint> tristoerase;
+
+			if (angle < 45.0) {
+				for (auto cvfit = mesh.cvf_iter(vh); cvfit.is_valid(); ++cvfit) {
+					if (facetomeshlet[cvfit->idx()] == mid)
+						tristoerase.push_back(cvfit->idx());
+				}
+				if (tristoerase.size() <= 2) {
+					for (auto& tri : tristoerase) {
+						auto th = mesh.face_handle(tri);
+						uint nodeadj = 0xFFFFFFFF;
+						for (auto cffit = mesh.cff_iter(th); cffit.is_valid(); ++cffit) {
+							if (facetomeshlet[cffit->idx()] != mid) {
+								nodeadj = facetomeshlet[cffit->idx()];
+								break;
+							}
+						}
+						assert(nodeadj != 0xFFFFFFFF);
+						mymeshlets[nodeadj].faces.insert(tri);
+						mymeshlets[mid].faces.erase(tri);
+						facetomeshlet[tri] = nodeadj;
+					}
+				}
+			}
+			if ((tristoerase.size()>0)&&(tristoerase.size() <= 2)) {
+				starthalfedgeid = mesh.opposite_halfedge_handle(mesh.next_halfedge_handle(nexthh)).idx();
+			}
+			else {
+				starthalfedgeid = nexthalfedge;
+			}
+
+			//更新 starthalfedge
+		}
+	}
+
+
+}
+
+void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, float decreaserate = 0.1, int cntloop = 200)
+{
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> dis(0.0, 1.0);//[0.0,1.0)
+
+
+	// face --> node 全局映射
+	std::vector<uint> facetomeshlet(nfaces);
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid)
+		for (auto& f : mymeshlets[mid].faces)
+			facetomeshlet[f] = mid;
+
+	std::vector<float> arearecords(mymeshlets.size(),0.0);
+	std::vector<float> boundrecords(mymeshlets.size(),0.0);
+
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		auto& meshlet = mymeshlets[mid];
+		float totalarea = 0;
+		float totalbound = 0;
+		if (mid == 57)
+			std::cout << "debug" << std::endl;
+
+		for (auto f : meshlet.faces) {
+			auto fh = mesh.face_handle(f);
+			std::vector<Eigen::Vector3d> pnts;
+			for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); cfvit++) {
+				auto vid = cfvit->idx();
+				auto pnt = mesh.point(mesh.vertex_handle(vid));
+				pnts.emplace_back(pnt[0], pnt[1], pnt[2]);
+			}
+			Eigen::Vector3d edge1 = pnts[1] - pnts[0];
+			Eigen::Vector3d edge2 = pnts[2] - pnts[1];
+			Eigen::Vector3d crossresult = edge1.cross(edge2);
+			totalarea = totalarea + 0.5 * crossresult.norm();
+
+			for (auto cfhit = mesh.cfh_iter(fh); cfhit.is_valid(); cfhit++) {
+				auto oppfaceid = cfhit->opp().face().idx();
+				if (meshlet.faces.find(oppfaceid) == meshlet.faces.end()) {
+					auto pnt0 = mesh.point(cfhit->from());
+					auto pnt1 = mesh.point(cfhit->to());
+					totalbound += (pnt0 - pnt1).length();
+				}
+			}
+		}
+		arearecords[mid] = totalarea;
+		boundrecords[mid] = totalbound;
+	}
+
+
+	//meshlet evaluate 可以正确pack meshlet 的vertex
+	std::vector<std::map<uint, Eigen::Vector3d>> positionrecords(mymeshlets.size());
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		auto& meshlet = mymeshlets[mid];
+		for (auto& v : meshlet.vertices) {
+			auto pnt = mesh.point(mesh.vertex_handle(v));
+			positionrecords[mid].insert(std::make_pair(v, Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }));
+		}
+	}
+
+	std::vector<float> energyrecocrd(mymeshlets.size());
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		if (mid == 57)
+			std::cout << "debug" << std::endl;
+		energyrecocrd[mid] = ComputeSimulateEnergy(arearecords[mid], boundrecords[mid], positionrecords[mid]);
+	}
+
+
+	//选取一个node
+
+	for (uint mid = 0; mid < mymeshlets.size(); mid++) {
+		Meshlet_built& singlemeshlet = mymeshlets[mid];
+		//三角形数量很少 --> 插入相邻的node中间去
+
+		int simulatecnt = 0;
+
+		std::cout << energyrecocrd[mid] << std::endl;
+
+		while ((simulatecnt<cntloop)&&(energyrecocrd[mid]>threshold))
+		{
+
+			//选一个边界三角形出来
+			bool isboundtris = false;
+			uint boundtriid;
+			do {
+				double randomNum = dis(gen);
+				int idx = int(randomNum * singlemeshlet.faces.size());
+				auto it = singlemeshlet.faces.begin();
+				std::advance(it, idx);
+				boundtriid = *it;
+				auto fh = mesh.face_handle(boundtriid);
+				for(auto cffit = mesh.cff_iter(fh);cffit.is_valid();++cffit)
+					if (facetomeshlet[cffit->idx()] != mid) {
+						isboundtris = true;
+						break;
+					}
+
+			} while (isboundtris != true);
+
+			bool TryEraseTri = dis(gen) < 0.5;
+
+			if (TryEraseTri) {
+				//尝试移除这一个三角形
+				uint triid = boundtriid;
+				uint ADJnode = 0xFFFFFFFF;
+				auto tempfh = mesh.face_handle(triid);
+
+				std::vector<float> aroundlengths;
+				std::vector<uint> aroundoppnodes;
+				std::vector<uint> oppvids;
+
+
+				for (auto cfhit = mesh.cfh_iter(tempfh); cfhit.is_valid(); ++cfhit) {
+					auto vfrom = cfhit->from();
+					auto vto = cfhit->to();
+					auto oppnodeid = facetomeshlet[cfhit->opp().face().idx()];
+					auto oppvid = cfhit->next().to().idx();
+					auto pntfrom = mesh.point(vfrom);
+					auto pntto = mesh.point(vto);
+					float edgelength = (pntto - pntfrom).length();
+
+					aroundlengths.push_back(edgelength);
+					aroundoppnodes.push_back(oppnodeid);
+					oppvids.push_back(oppvid);
+				}
+
+
+				for (auto oppnode : aroundoppnodes)
+					if (oppnode != mid) {
+						ADJnode = oppnode;
+					}
+
+				assert(ADJnode != 0xFFFFFFFF);
+
+				float triarea = calculateTrianglearea(aroundlengths[0], aroundlengths[1], aroundlengths[2]);
+				float Rawenergy = energyrecocrd[ADJnode] + energyrecocrd[mid];
+				float newadjenergy, newmidenergy;
+				float lengthajdadd = 0;
+				float lengthmidadd = 0;
+				std::vector<uint> veradjadd;
+				std::vector<uint> vermiderase;
+
+				for (int id = 0; id < 3; id++) {
+					if (aroundoppnodes[id] == mid)
+						lengthmidadd += aroundlengths[id];
+					else
+						lengthmidadd -= aroundlengths[id];
+				}
+
+				for (int id = 0; id < 3; id++) {
+					if (aroundoppnodes[id] == ADJnode)
+						lengthajdadd -= aroundlengths[id];
+					else
+						lengthajdadd += aroundlengths[id];
+				}
+
+				for (auto v : oppvids)
+					if (mymeshlets[ADJnode].vertices.find(v) == mymeshlets[ADJnode].vertices.end())
+						veradjadd.push_back(v);
+
+				facetomeshlet[triid] = ADJnode;
+				for (auto v : oppvids) {
+					bool isolate = true;
+					auto vh = mesh.vertex_handle(v);
+					for(auto cvfit = mesh.cvf_iter(vh);cvfit.is_valid();cvfit++)
+						if (facetomeshlet[cvfit->idx()] == mid) {
+							isolate = false;
+							break;
+						}
+					if (isolate)
+						vermiderase.push_back(v);
+				}
+				facetomeshlet[triid] = mid;
+
+
+
+
+					//计算 energy 并比较
+				for (auto& v : veradjadd) {
+					auto pnt = mesh.point(mesh.vertex_handle(v));
+					positionrecords[ADJnode].insert(std::make_pair(v, Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }));
+				}
+				newadjenergy = ComputeSimulateEnergy(arearecords[ADJnode]+triarea, boundrecords[ADJnode]+lengthajdadd, positionrecords[ADJnode]);
+				for (auto& v : veradjadd)
+					positionrecords[ADJnode].erase(v);
+
+				for (auto& v : vermiderase)
+					positionrecords[mid].erase(v);
+				if (positionrecords.empty())
+					newmidenergy = 0;
+				else
+					newmidenergy = ComputeSimulateEnergy(arearecords[mid] - triarea, boundrecords[mid] + lengthmidadd , positionrecords[mid]);
+				for (auto& v : vermiderase) {
+					auto pnt = mesh.point(mesh.vertex_handle(v));
+					positionrecords[mid].insert(std::make_pair(v, Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }));
+				}
+				
+
+				float cmpvalue = 1.0;
+				if ((newadjenergy + newmidenergy) < Rawenergy)
+					cmpvalue = 1.0;
+				else
+					cmpvalue = std::exp((Rawenergy - newadjenergy - newmidenergy) / (Rawenergy*decreaserate));
+
+
+				if (dis(gen) < cmpvalue) {
+					facetomeshlet[triid] = ADJnode;
+					mymeshlets[mid].faces.erase(triid);
+					mymeshlets[ADJnode].faces.insert(triid);
+
+					arearecords[mid] -= triarea;
+					arearecords[ADJnode] += triarea;
+
+					boundrecords[mid] += lengthmidadd;
+					boundrecords[ADJnode] += lengthajdadd;
+
+					for (auto& v : veradjadd) {
+						mymeshlets[ADJnode].vertices.insert(v);
+						auto pnt = mesh.point(mesh.vertex_handle(v));
+						positionrecords[ADJnode].insert(std::make_pair(v, Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }));
+					}
+					for (auto& v : vermiderase) {
+						mymeshlets[mid].vertices.erase(v);
+						positionrecords[mid].erase(v);
+					}
+
+					energyrecocrd[mid] = newmidenergy;
+					energyrecocrd[ADJnode] = newadjenergy;
+				}
+			}
+			else {
+				//try insert triangle into mid
+				uint triid;
+				std::vector<uint> potentialtris;
+				for (auto cffit = mesh.cff_iter(mesh.face_handle(boundtriid)); cffit.is_valid(); ++cffit) {
+					if (facetomeshlet[cffit->idx()] != mid) {
+						potentialtris.push_back(cffit->idx());
+					}
+				}
+				triid = potentialtris[int(dis(gen) * potentialtris.size())];
+				uint ADJnode = facetomeshlet[triid];
+				assert(ADJnode != mid);
+
+				auto tempfh = mesh.face_handle(triid);
+
+				std::vector<float> aroundlengths;
+				std::vector<uint> aroundoppnodes;
+				std::vector<uint> oppvids;
+
+				for (auto cfhit = mesh.cfh_iter(tempfh); cfhit.is_valid(); ++cfhit) {
+					auto vfrom = cfhit->from();
+					auto vto = cfhit->to();
+					auto oppnodeid = facetomeshlet[cfhit->opp().face().idx()];
+					auto oppvid = cfhit->next().to().idx();
+					auto pntfrom = mesh.point(vfrom);
+					auto pntto = mesh.point(vto);
+					float edgelength = (pntto - pntfrom).length();
+
+					aroundlengths.push_back(edgelength);
+					aroundoppnodes.push_back(oppnodeid);
+					oppvids.push_back(oppvid);
+				}
+
+
+				float triarea = calculateTrianglearea(aroundlengths[0], aroundlengths[1], aroundlengths[2]);
+				float Rawenergy = energyrecocrd[ADJnode] + energyrecocrd[mid];
+				float newadjenergy, newmidenergy;
+				float lengthajdadd = 0;
+				float lengthmidadd = 0;
+				std::vector<uint> vermidadd;
+				std::vector<uint> veradjerase;
+				//triangle 要插入 mid node
+				for (int id = 0; id < 3; id++) {
+					if (aroundoppnodes[id] == mid)
+						lengthmidadd -= aroundlengths[id];
+					else
+						lengthmidadd += aroundlengths[id];
+				}
+
+				for (int id = 0; id < 3; id++) {
+					if (aroundoppnodes[id] == ADJnode)
+						lengthajdadd += aroundlengths[id];
+					else
+						lengthajdadd -= aroundlengths[id];
+				}
+
+				for (auto v : oppvids)
+					if (mymeshlets[mid].vertices.find(v) == mymeshlets[mid].vertices.end())
+						vermidadd.push_back(v);
+
+				facetomeshlet[triid] = mid;
+				for (auto v : oppvids) {
+					bool isolate = true;
+					auto vh = mesh.vertex_handle(v);
+					for (auto cvfit = mesh.cvf_iter(vh); cvfit.is_valid(); cvfit++)
+						if (facetomeshlet[cvfit->idx()] == ADJnode) {
+							isolate = false;
+							break;
+						}
+					if (isolate)
+						veradjerase.push_back(v);
+				}
+				facetomeshlet[triid] = ADJnode;
+
+
+				for (auto& v : veradjerase) 
+					positionrecords[ADJnode].erase(v);
+				
+				if (positionrecords[ADJnode].empty())
+					newadjenergy = 0;
+				else
+					newadjenergy = ComputeSimulateEnergy(arearecords[ADJnode] - triarea, boundrecords[ADJnode] + lengthajdadd, positionrecords[ADJnode]);
+				for (auto& v : veradjerase) {
+					auto pnt = mesh.point(mesh.vertex_handle(v));
+					positionrecords[ADJnode].insert(std::make_pair(v, Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }));
+				}
+
+				for (auto& v : vermidadd){
+					auto pnt = mesh.point(mesh.vertex_handle(v));
+					positionrecords[mid].insert(std::make_pair(v, Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }));
+				}
+				newmidenergy = ComputeSimulateEnergy(arearecords[mid] + triarea, boundrecords[mid] + lengthmidadd, positionrecords[mid]);
+				for (auto& v : vermidadd) 
+					positionrecords[mid].erase(v);
+				
+
+				float cmpvalue = 1.0;
+				if ((newadjenergy + newmidenergy) < Rawenergy)
+					cmpvalue = 1.0;
+				else
+					cmpvalue = std::exp((Rawenergy - newadjenergy - newmidenergy) / (Rawenergy * decreaserate));
+
+
+				if (dis(gen) < cmpvalue) {
+					facetomeshlet[triid] = mid;
+					mymeshlets[mid].faces.insert(triid);
+					mymeshlets[ADJnode].faces.erase(triid);
+
+					arearecords[mid] += triarea;
+					arearecords[ADJnode] -= triarea;
+
+					boundrecords[mid] += lengthmidadd;
+					boundrecords[ADJnode] += lengthajdadd;
+
+					for (auto& v : vermidadd) {
+						mymeshlets[mid].vertices.insert(v);
+						auto pnt = mesh.point(mesh.vertex_handle(v));
+						positionrecords[mid].insert(std::make_pair(v, Eigen::Vector3d{ pnt[0],pnt[1],pnt[2] }));
+					}
+					for (auto& v : veradjerase) {
+						mymeshlets[ADJnode].vertices.erase(v);
+						positionrecords[ADJnode].erase(v);
+					}
+
+					energyrecocrd[mid] = newmidenergy;
+					energyrecocrd[ADJnode] = newadjenergy;
+				}
+
+
+			}
+			simulatecnt++;
+		}
+		std::cout << energyrecocrd[mid] << std::endl;
+
+
+
+		//建立初始状态
+
+		//从边界，相邻随机选一个三角形
+		//计算新的状态值
+		//是否转移，若转移则更新
+
+
+
+		//终止，如果超过了，排序去除三角形
+		//判断是否连续
+
+	}
+
+	int zerocnt = 0;
+	for (auto& meshlet : mymeshlets) {
+		//std::cout << meshlet.faces.size() << std::endl;
+		if (meshlet.faces.size() == 0)
+			zerocnt++;
+	}
+
+	while (zerocnt != 0) {
+		int idx = 0;
+		for (int i = 0; i < mymeshlets.size(); ++i)
+			if (mymeshlets[i].faces.size() != 0) {
+				idx = i;
+				break;
+			}
+		mymeshlets.erase(mymeshlets.begin(), mymeshlets.begin() + idx);
+		zerocnt -= idx;
+
+	}
 
 
 }
@@ -1738,6 +2279,171 @@ void NewCluster::TestMeshlet(uint meshletid,const MyMesh& mesh)
 				std::cout << "error diconnect tri "<<f << std::endl;
 	}
 
+}
+
+void NewCluster::PackBoundTris(const MyMesh& mesh, const Meshlet_built& meshlet, std::vector<uint>& tristopack, uint mid, const std::vector<uint>& facetomeshlet)
+{
+	for (auto f : meshlet.faces) {
+		auto fh = mesh.face_handle(f);
+		for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+			uint fid = cffit->idx();
+			uint nodeid = facetomeshlet[fid];
+			if (nodeid != mid) {
+				tristopack.emplace_back(f);
+				break;
+			}
+		}
+	}
+	return;
+
+}
+
+void NewCluster::EvaluateMeshlet(const MyMesh& mesh)
+{
+	//Eshape
+	float totalEshape = 0;
+	std::vector<float> boundrecords;
+	for (auto& meshlet : mymeshlets) {
+		float totalarea = 0;
+		float totalbound = 0;
+		meshlet.vertices.clear();
+		for (auto& f : meshlet.faces) {
+			auto fh = mesh.face_handle(f);
+			for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); ++cfvit) {
+				meshlet.vertices.insert(cfvit->idx());
+			}
+		}
+
+		for (auto f : meshlet.faces) {
+			auto fh = mesh.face_handle(f);
+			std::vector<Eigen::Vector3d> pnts;
+			for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); cfvit++) {
+				auto vid = cfvit->idx();
+				auto pnt = mesh.point(mesh.vertex_handle(vid));
+				pnts.emplace_back(pnt[0], pnt[1], pnt[2]);
+			}
+			Eigen::Vector3d edge1 = pnts[1] - pnts[0];
+			Eigen::Vector3d edge2 = pnts[2] - pnts[1];
+			Eigen::Vector3d crossresult = edge1.cross(edge2);
+			totalarea = totalarea + 0.5 * crossresult.norm();
+
+			for (auto cfhit = mesh.cfh_iter(fh); cfhit.is_valid(); cfhit++) {
+				auto oppfaceid = cfhit->opp().face().idx();
+				if (meshlet.faces.find(oppfaceid) == meshlet.faces.end()) {
+					auto pnt0 = mesh.point(cfhit->from());
+					auto pnt1 = mesh.point(cfhit->to());
+					totalbound += (pnt0 - pnt1).length();
+				}
+			}
+		}
+		boundrecords.emplace_back(totalbound);
+		auto temp = (totalbound * totalbound / (4 * PI * totalarea) - 1);
+		totalEshape += temp;
+		if (temp > 1000)
+			std::cout << "debug" << std::endl;
+	}
+	std::cout << "total Eshape " << totalEshape << std::endl;
+	//Efit
+
+	float totalEfit = 0;
+	int mid = 0;
+	for (auto& meshlet : mymeshlets) {
+
+
+		std::vector<Eigen::Vector3d> points;
+		for (auto& v : meshlet.vertices) {
+			auto pnt = mesh.point(mesh.vertex_handle(v));
+			points.emplace_back(pnt[0], pnt[1], pnt[2]);
+		}
+		Eigen::Vector3d normal, center;
+		totalEfit += 40*FitsquareEnergy(points, normal, center)/points.size()/boundrecords[mid];
+		mid++;
+	}
+	std::cout << "total Efit " << totalEfit << std::endl;
+
+
+
+}
+
+float NewCluster::FitsquareEnergy(const std::vector<Eigen::Vector3d>& points, Eigen::Vector3d& normal, Eigen::Vector3d& center)
+{
+	Eigen::MatrixXd m_cloud(points.size(), 3);
+	for (int i = 0; i < points.size(); ++i) {
+		m_cloud.row(i) = points[i].transpose();
+	}
+
+	Eigen::RowVector3d centroid = m_cloud.colwise().mean();
+	center = centroid;
+	// 2、去质心
+	Eigen::MatrixXd& demean = m_cloud;
+	demean.rowwise() -= centroid;
+	// 3、SVD分解求解协方差矩阵的特征值特征向量
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(demean,  Eigen::ComputeThinV);
+	Eigen::Matrix3d V = svd.matrixV();
+	//Eigen::MatrixXd U = svd.matrixU();
+	//Eigen::Matrix3d S = U.inverse() * demean * V.transpose().inverse();
+	// 5、平面的法向量a,b,c
+	normal = Eigen::Vector3d{ V(0, 2), V(1, 2), V(2, 2) };
+	// 6、原点到平面的距离d
+
+	// 计算拟合平面的距离绝对值的和
+	float distanceSum = 0.0;
+	for (const auto& point : points) {
+		float distance = std::abs((normal).dot(point - centroid.transpose()));
+		distanceSum += distance;
+	}
+
+	return distanceSum;
+}
+
+float NewCluster::FitsquareEnergy(const std::map<uint, Eigen::Vector3d>& positions, Eigen::Vector3d& normal, Eigen::Vector3d& center)
+{
+	Eigen::MatrixXd m_cloud(positions.size(), 3);
+	int id = 0;
+	for (const auto& elem : positions) {
+		m_cloud.row(id) = elem.second.transpose();
+		id++;
+	}
+
+	Eigen::RowVector3d centroid = m_cloud.colwise().mean();
+	center = centroid;
+	// 2、去质心
+	Eigen::MatrixXd& demean = m_cloud;
+	demean.rowwise() -= centroid;
+	// 3、SVD分解求解协方差矩阵的特征值特征向量
+	Eigen::JacobiSVD<Eigen::MatrixXd> svd(demean, Eigen::ComputeThinV);
+	Eigen::Matrix3d V = svd.matrixV();
+	//Eigen::MatrixXd U = svd.matrixU();
+	//Eigen::Matrix3d S = U.inverse() * demean * V.transpose().inverse();
+	// 5、平面的法向量a,b,c
+	normal = Eigen::Vector3d{ V(0, 2), V(1, 2), V(2, 2) };
+	// 6、原点到平面的距离d
+
+	// 计算拟合平面的距离绝对值的和
+	float distanceSum = 0.0;
+	for (const auto& elem: positions) {
+		float distance = std::abs((normal).dot(elem.second - centroid.transpose()));
+		distanceSum += distance;
+	}
+
+	return distanceSum;
+}
+
+float NewCluster::calculateTrianglearea(float a, float b, float c)
+{
+	float s = (a + b + c) / 2;
+	float area = std::sqrt(s * (s - a) * (s - b) * (s - c));
+	return area;
+}
+
+float NewCluster::ComputeSimulateEnergy(float area, float length, const std::map<uint, Eigen::Vector3d>& positions)
+{
+	float Eshape = (length * length) / (4 * PI * area) - 1;
+	Eigen::Vector3d normal, center;
+	float Efit = 40*FitsquareEnergy(positions, normal, center);
+	float Enum = 10*std::max((float(positions.size()) - maxv) / maxv, 0.0f);
+
+	return Eshape+ Efit + Enum;
 }
 
 
