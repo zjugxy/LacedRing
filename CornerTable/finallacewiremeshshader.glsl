@@ -335,9 +335,6 @@ void main(){
         v_out[i+threadid+intergeonum].color =meshletcolor;
 	}
 
-
-
-
     //for(int i=0;i+threadid<numvertex;i+=GROUP_SIZE)
     //    gl_PrimitiveIndicesNV[i+threadid] = i+threadid;
 
@@ -381,8 +378,8 @@ void main(){
              gl_PrimitiveIndicesNV[triid*3+1] = 0;
              gl_PrimitiveIndicesNV[triid*3+2] = 0;
          }else{
-             gl_PrimitiveIndicesNV[triid*3] = intergeonum+vertexid+temp;
-             gl_PrimitiveIndicesNV[triid*3+1] = intergeonum+(vertexid+temp+1)%exvernum;
+             gl_PrimitiveIndicesNV[triid*3] = intergeonum+i+threadid;
+             gl_PrimitiveIndicesNV[triid*3+1] = intergeonum+(i+threadid+1)%exvernum;
              gl_PrimitiveIndicesNV[triid*3+2] = idx;
          }
      }

@@ -300,6 +300,8 @@ void main(){
 
 
 //vertex part
+
+
     if(intergeonum!=0){
         if(threadid==0)
             ParseTempGeo(InterGeo[intergeolocation],InterGeo[intergeolocation+1],InterGeo[intergeolocation+2],
@@ -329,10 +331,13 @@ void main(){
             vertexid = i+threadid - temp;
         else
             vertexid = presum[wireid] - (i+threadid);
+
+        //if((vertexid == 0) || (vertexid == ewirevernum[wireid] - 1))//这是corner
+        //    continue;
         uint geoloc = (DesInfo[start+2+ingeostart+wireid]);
         vec4 vergeo = ParseExterPnt(wireid+1,96+(vertexid*pntlength[wireid+1]),geoloc);
         gl_MeshVerticesNV[i+threadid+intergeonum].gl_Position = projection*view*model*vergeo;
-        v_out[i+threadid+intergeonum].color = vec3(1.0,1.0,1.0);
+        v_out[i+threadid+intergeonum].color = meshletcolor;
 	}
 
 
@@ -341,63 +346,6 @@ void main(){
     for(int i=0;i+threadid<numvertex;i+=GROUP_SIZE)
         gl_PrimitiveIndicesNV[i+threadid] = i+threadid;
 
-//con
-    // for(int i=0;i+threadid<intergeonum*2;i+=GROUP_SIZE){
-    //         uint id = i+threadid;
-    //         uint vertexid = id;
-    //         if(vertexid>=intergeonum)
-    //             vertexid -= intergeonum;
-            
-    //         uint idx = GetInterConInfo(interconlocation,i+threadid);
-    //         if(idx==0xFF){
-    //             gl_PrimitiveIndicesNV[id*3] = 0xFFFFFFFF;
-    //             gl_PrimitiveIndicesNV[id*3+1] = 0xFFFFFFFF;
-    //             gl_PrimitiveIndicesNV[id*3+2] = 0xFFFFFFFF;
-    //         }else{
-    //             gl_PrimitiveIndicesNV[id*3] = vertexid;
-    //             gl_PrimitiveIndicesNV[id*3+1] = (vertexid+1)%intergeonum;
-    //             gl_PrimitiveIndicesNV[id*3+2] = idx;
-    //         }
-    // }
-
-    // for(int i = 0; i+threadid < numvertex - intergeonum;i+=GROUP_SIZE){
-    //     uint wireid = FindWireId(i+threadid,ewirenum);
-    //     uint constart = DesInfo[start+2+ingeostart+ewirenum+wireid];
-    //     uint temp = 0;
-    //     if(wireid!=0)
-    //         temp = presum[wireid-1];
-    //     uint vertexid = i+threadid - temp;
-    //     uint idx;
-
-    //     if(reverse[wireid]==false)
-    //         idx = GetExterConInfo(constart,vertexid);
-    //     else
-    //         idx = GetExterConInfo(constart,vertexid+ewirevernum[wireid]);
-
-    //     uint triid = 2*intergeonum+i+threadid;
-    
-    //     if(idx==0xFF){
-    //         gl_PrimitiveIndicesNV[triid*3] = 0;
-    //         gl_PrimitiveIndicesNV[triid*3+1] = 0;
-    //         gl_PrimitiveIndicesNV[triid*3+2] = 0;
-    //     }else{
-    //         gl_PrimitiveIndicesNV[triid*3] = intergeonum+vertexid+temp;
-    //         gl_PrimitiveIndicesNV[triid*3+1] = intergeonum+(vertexid+temp+1)%exvernum;
-    //         gl_PrimitiveIndicesNV[triid*3+2] = idx;
-    //     }
-    // }
-    
-    
-    // for(int i = 0; i+threadid < irrnum;i+=GROUP_SIZE){
-    //     uint id = 2*intergeonum + (i+threadid)*3;
-    //     uint idx0 = GetInterConInfo(interconlocation,id);
-    //     uint idx1 = GetInterConInfo(interconlocation,id+1);
-    //     uint idx2 = GetInterConInfo(interconlocation,id+2);
-    //     uint triid = 2*intergeonum + exvernum + i+threadid;
-    //     gl_PrimitiveIndicesNV[triid*3] = idx0;
-    //     gl_PrimitiveIndicesNV[triid*3+1] = idx1;
-    //     gl_PrimitiveIndicesNV[triid*3+2] = idx2;
-    // }
 
 
 	if(threadid==0)

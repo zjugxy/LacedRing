@@ -112,6 +112,11 @@ public:
         glUniform1fv(uniformLocation, 12, data.data());
     }
 
+    void setUintArray3(const std::string& name, const std::vector<uint32_t>& data) {
+        GLint uniformLocation = glGetUniformLocation(ID, name.c_str());
+        glUniform1uiv(uniformLocation, 3, reinterpret_cast<const GLuint*>(data.data()));
+    }
+
 private:
     // utility function for checking shader compilation/linking errors.
     // ------------------------------------------------------------------------

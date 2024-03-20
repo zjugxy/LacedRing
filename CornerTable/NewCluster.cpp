@@ -231,15 +231,24 @@ NewCluster::NewCluster(uint maxverts, uint maxtris, const MyMesh& mesh,Meshlets 
 	std::cout << "total meshlets is " << mymeshlets.size() << std::endl;
 	
 	//
+	std::cout << "优化前meshlet数量：" << mymeshlets.size() << std::endl;
+
 	EvaluateMeshlet(mesh);
 	DeleteSmallMesh(mesh);
+	
+	EvaluateMeshlet(mesh);
+	
+	//PrintMeshletInfo();
 	FirstDeleteMesh(mesh);
+	SimulateAnneal(mesh,0.5,0.01,500);
+	
 	EvaluateMeshlet(mesh);
-	SimulateAnneal(mesh,0.3334,0.005,200);
-	DeleteSmallMesh(mesh);
-
+	
+	
+	RegularBigMeshlet(mesh);
+	
 	EvaluateMeshlet(mesh);
-
+	std::cout << "优化后meshlet数量：" << mymeshlets.size() << std::endl;
 
 
 	startTime = std::chrono::steady_clock::now();
@@ -544,7 +553,7 @@ void NewCluster::DeleteSmallMesh(const MyMesh& mesh)
 
 		//std::cout << "cut meshlet " << i << std::endl;
 
-		if (mymeshlets[i].vertices.size() > maxv / 6)break;
+		if (mymeshlets[i].vertices.size() > maxv / 3)break;
 		//
 		while (!mymeshlets[i].faces.empty()) {
 			for (auto& singleface : mymeshlets[i].faces) {
@@ -761,9 +770,308 @@ void NewCluster::FirstDeleteMesh(const MyMesh& mesh)
 	}
 
 
+	int zerocnt = 0;
+	for (auto& meshlet : mymeshlets) {
+		//std::cout << meshlet.faces.size() << std::endl;
+		if (meshlet.faces.size() == 0)
+			zerocnt++;
+	}
+
+	while (zerocnt != 0) {
+		int idx = 0;
+		for (int i = 0; i < mymeshlets.size(); ++i)
+			if (mymeshlets[i].faces.size() != 0) {
+				idx = i;
+				break;
+			}
+		mymeshlets.erase(mymeshlets.begin(), mymeshlets.begin() + idx);
+		zerocnt -= idx;
+
+	}
 }
 
-void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, float decreaserate = 0.1, int cntloop = 200)
+void NewCluster::RegularBigMeshlet(const MyMesh& mesh)
+{
+	std::vector<uint> facetomeshlet(nfaces);
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid)
+		for (auto& f : mymeshlets[mid].faces)
+			facetomeshlet[f] = mid;
+
+
+	//chuli分裂的meshlet
+	uint specialcnt = 0;
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		//std::cout << mid << std::endl;
+		auto& meshlet = mymeshlets[mid];
+		std::unordered_set<uint> newfaceset;
+		std::deque<uint> mydeque;
+
+		uint starttri = *meshlet.faces.begin();
+		mydeque.push_back(starttri);
+		newfaceset.insert(starttri);
+
+		while (!mydeque.empty())
+		{
+			auto triid = mydeque.front();
+			mydeque.pop_front();
+
+			auto fh = mesh.face_handle(triid);
+			for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+				if(meshlet.faces.find(cffit->idx())!=meshlet.faces.end())
+					if (newfaceset.find(cffit->idx()) == newfaceset.end()) {
+						newfaceset.insert(cffit->idx());
+						mydeque.push_back(cffit->idx());
+					}
+			}
+		}
+		if (newfaceset.size() == meshlet.faces.size())
+			continue;
+
+		specialcnt++;
+
+		//有问题；
+		for (auto f : newfaceset)
+			meshlet.faces.erase(f);
+
+
+		std::vector<std::unordered_set<uint>> facesets;
+
+		while (!meshlet.faces.empty()) {
+			auto startid = *meshlet.faces.begin();
+			std::unordered_set<uint> tempset;
+			std::deque<uint> tempdeque;
+
+			tempset.insert(startid);
+			tempdeque.push_back(startid);
+			meshlet.faces.erase(startid);
+			while (!tempdeque.empty())
+			{
+				auto triid = tempdeque.front();
+				tempdeque.pop_front();
+				auto fh = mesh.face_handle(triid);
+				for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+					if (meshlet.faces.find(cffit->idx()) != meshlet.faces.end())
+						if (tempset.find(cffit->idx()) == tempset.end()) {
+							tempset.insert(cffit->idx());
+							tempdeque.push_back(cffit->idx());
+							meshlet.faces.erase(cffit->idx());
+						}
+				}
+			}
+			facesets.push_back(std::move(tempset));
+		}
+		//newfaceset facesets
+
+		meshlet.faces = newfaceset;
+		meshlet.vertices.clear();
+		for (auto f : meshlet.faces) {
+			auto fh = mesh.face_handle(f);
+			for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); ++cfvit)
+				meshlet.vertices.insert(cfvit->idx());
+		}
+
+		for (auto& faceset : facesets) {
+			Meshlet_built built;
+			built.faces = faceset;
+			for (auto f : faceset) {
+				auto fh = mesh.face_handle(f);
+				for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); ++cfvit)
+					built.vertices.insert(cfvit->idx());
+				facetomeshlet[f] = mymeshlets.size();
+			}
+			mymeshlets.push_back(std::move(built));
+		}
+
+		//std::cout << mid << " 分解成为了 " << 1 + facesets.size() << std::endl;
+	}
+
+	std::cout << "special 总数量"<<specialcnt<<" meshlet 总数量" << mymeshlets.size() << std::endl;
+	specialcnt = 0;
+
+
+	for(int mid = mymeshlets.size()-1;mid>=0;--mid){
+
+		//std::cout<<"处理" << mid << std::endl;
+		auto& meshlet = mymeshlets[mid];
+		if ((meshlet.faces.size() <= maxf) && (meshlet.vertices.size() <= maxv))
+			continue;
+		
+		std::vector<uint> twoboundtris;
+
+		for (auto& f : meshlet.faces) {
+			int boundcnt = 0;
+			auto fh = mesh.face_handle(f);
+			for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); cffit++) {
+				if (facetomeshlet[cffit->idx()] != mid)
+					boundcnt++;
+			}
+			if (boundcnt >= 2)
+				twoboundtris.push_back(f);
+		}
+
+		if ((meshlet.vertices.size() - twoboundtris.size() <= maxv) && (meshlet.faces.size() - twoboundtris.size() <= maxf)) {
+			//尝试减少顶点和tris数量
+			for (auto& triid : twoboundtris) {
+				auto fh = mesh.face_handle(triid);
+				std::set<uint> boundnodes;
+				std::vector<uint> vids;
+				for (auto cfvit = mesh.cfv_iter(fh); cfvit.is_valid(); ++cfvit) {
+					vids.push_back(cfvit->idx());
+				}
+
+				for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit)
+					if (facetomeshlet[cffit->idx()] != mid)
+						boundnodes.insert(facetomeshlet[cffit->idx()]);
+
+				for (auto ADJnode : boundnodes) {
+					//判断可不可以插入
+					uint vaddcnt = 0;
+					for (auto v : vids)
+						if (mymeshlets[ADJnode].vertices.find(v) == mymeshlets[ADJnode].vertices.end())
+							vaddcnt++;
+					if (mymeshlets[ADJnode].vertices.size() + vaddcnt > maxv)
+						continue;
+					if (mymeshlets[ADJnode].faces.size() + 1 > maxf)
+						continue;
+
+					//执行插入
+					for (auto v : vids)
+						mymeshlets[ADJnode].vertices.insert(v);
+					mymeshlets[ADJnode].faces.insert(triid);
+
+					facetomeshlet[triid] = ADJnode;
+					mymeshlets[mid].faces.erase(triid);
+
+					for (auto v : vids) {
+						auto vh = mesh.vertex_handle(v);
+						bool canerase = true;
+						for (auto cvfit = mesh.cvf_iter(vh); cvfit.is_valid(); cvfit++) {
+							if (facetomeshlet[cvfit->idx()] == mid) {
+								canerase = false;
+								break;
+							}
+						}
+						if (canerase)
+							mymeshlets[mid].vertices.erase(v);
+					}
+					//只可以插入一次
+					break;
+				}
+				if ((meshlet.vertices.size()<= maxv) && (meshlet.faces.size() <= maxf))
+					break;
+			}
+
+		}
+
+		if (meshlet.faces.size() > maxf || meshlet.vertices.size() > maxv) {
+			//切割
+			//get a boundtri
+			specialcnt++;
+			uint starttriid;
+			std::unordered_set<uint> newfaceset;
+			std::deque<uint> mydeque;
+
+			for (auto f : meshlet.faces) {
+				auto fh = mesh.face_handle(f);
+				for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+					if (facetomeshlet[cffit->idx()] != mid) {
+						starttriid = f;
+						break;
+					}
+				}
+			}
+
+			mydeque.push_back(starttriid);
+			newfaceset.insert(starttriid);
+			while (newfaceset.size() < maxf / 3) {
+				auto triid = mydeque.front();
+				mydeque.pop_front();
+				auto fh = mesh.face_handle(triid);
+				for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+					if(meshlet.faces.find(cffit->idx())!=meshlet.faces.end())
+						if (newfaceset.find(cffit->idx()) == newfaceset.end()) {
+							newfaceset.insert(cffit->idx());
+							mydeque.push_back(cffit->idx());
+						}
+				}
+				if (mydeque.empty())break;
+			}
+			std::cout << newfaceset.size() << " " << meshlet.faces.size()<<" "<<meshlet.vertices.size() << std::endl;
+
+			for (auto f : newfaceset)
+				meshlet.faces.erase(f);
+
+			std::vector<std::unordered_set<uint>> facesets;
+
+			while (!meshlet.faces.empty()) {
+				auto startid = *meshlet.faces.begin();
+				std::unordered_set<uint> tempset;
+				std::deque<uint> tempdeque;
+
+				tempset.insert(startid);
+				tempdeque.push_back(startid);
+				meshlet.faces.erase(startid);
+				while (!tempdeque.empty())
+				{
+					auto triid = tempdeque.front();
+					tempdeque.pop_front();
+					auto fh = mesh.face_handle(triid);
+					for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
+						if (meshlet.faces.find(cffit->idx()) != meshlet.faces.end())
+							if (tempset.find(cffit->idx()) == tempset.end()) {
+								tempset.insert(cffit->idx());
+								tempdeque.push_back(cffit->idx());
+								meshlet.faces.erase(cffit->idx());
+							}
+					}
+				}
+				facesets.push_back(std::move(tempset));
+			}
+
+			std::sort(facesets.begin(), facesets.end(), [](const std::unordered_set<uint>& seta, const std::unordered_set<uint>& setb){
+					return seta.size() < setb.size();
+				});
+			assert(facesets.size() >= 1);
+			for (uint i = 0; i < facesets.size() - 1; i++) {
+				//std::cout << i << " " << facesets.size() << std::endl;
+				auto& singleset = facesets[i];
+				for (auto f : singleset)
+					newfaceset.insert(f);
+			}
+
+			meshlet.vertices.clear();
+			meshlet.faces = newfaceset;
+			for (auto f : meshlet.faces) {
+				auto tempfh = mesh.face_handle(f);
+				for (auto cfvit = mesh.cfv_iter(tempfh); cfvit.is_valid(); ++cfvit)
+					meshlet.vertices.insert(cfvit->idx());
+			}
+
+
+
+
+			Meshlet_built newmeshlet;
+			newmeshlet.faces = facesets.back();
+			for (auto f : newmeshlet.faces) {
+				auto tempfh = mesh.face_handle(f);
+				for (auto cfvit = mesh.cfv_iter(tempfh); cfvit.is_valid(); ++cfvit)
+					newmeshlet.vertices.insert(cfvit->idx());
+			}
+
+			for (auto f : newmeshlet.faces)
+				facetomeshlet[f] = mymeshlets.size();
+
+			mymeshlets.push_back(std::move(newmeshlet));
+		}
+	
+	}
+
+	std::cout << "分裂 总数量" << specialcnt << " meshlet 总数量" << mymeshlets.size() << std::endl;
+
+
+}
+
+void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, float decreaserate = 0.01, int cntloop = 200)
 {
 
 	std::random_device rd;
@@ -784,8 +1092,6 @@ void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, flo
 		auto& meshlet = mymeshlets[mid];
 		float totalarea = 0;
 		float totalbound = 0;
-		if (mid == 57)
-			std::cout << "debug" << std::endl;
 
 		for (auto f : meshlet.faces) {
 			auto fh = mesh.face_handle(f);
@@ -809,9 +1115,14 @@ void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, flo
 				}
 			}
 		}
+
+		if (totalbound * totalbound / 4 / PI / totalarea < 1)
+			std::cout << "error in mid area calaulate" << mid << std::endl;
+
 		arearecords[mid] = totalarea;
 		boundrecords[mid] = totalbound;
 	}
+
 
 
 	//meshlet evaluate 可以正确pack meshlet 的vertex
@@ -826,8 +1137,6 @@ void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, flo
 
 	std::vector<float> energyrecocrd(mymeshlets.size());
 	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
-		if (mid == 57)
-			std::cout << "debug" << std::endl;
 		energyrecocrd[mid] = ComputeSimulateEnergy(arearecords[mid], boundrecords[mid], positionrecords[mid]);
 	}
 
@@ -839,8 +1148,6 @@ void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, flo
 		//三角形数量很少 --> 插入相邻的node中间去
 
 		int simulatecnt = 0;
-
-		std::cout << energyrecocrd[mid] << std::endl;
 
 		while ((simulatecnt<cntloop)&&(energyrecocrd[mid]>threshold))
 		{
@@ -952,7 +1259,7 @@ void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, flo
 
 				for (auto& v : vermiderase)
 					positionrecords[mid].erase(v);
-				if (positionrecords.empty())
+				if (positionrecords[mid].empty())
 					newmidenergy = 0;
 				else
 					newmidenergy = ComputeSimulateEnergy(arearecords[mid] - triarea, boundrecords[mid] + lengthmidadd , positionrecords[mid]);
@@ -1126,21 +1433,6 @@ void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, flo
 			}
 			simulatecnt++;
 		}
-		std::cout << energyrecocrd[mid] << std::endl;
-
-
-
-		//建立初始状态
-
-		//从边界，相邻随机选一个三角形
-		//计算新的状态值
-		//是否转移，若转移则更新
-
-
-
-		//终止，如果超过了，排序去除三角形
-		//判断是否连续
-
 	}
 
 	int zerocnt = 0;
@@ -1159,10 +1451,9 @@ void NewCluster::SimulateAnneal(const MyMesh& mesh,float threshold = 0.3334, flo
 			}
 		mymeshlets.erase(mymeshlets.begin(), mymeshlets.begin() + idx);
 		zerocnt -= idx;
-
 	}
 
-
+	//
 }
 
 uint NewCluster::CalculateVertexCnt(const MyMesh& mesh, uint vidx, const std::vector<uint>& facemeshletid)
@@ -1636,6 +1927,10 @@ bool NewCluster::ShapeErrorDetect(const MyMesh& mesh, uint mid)
 		loops.push_back(oneloop);
 	}
 
+	if (mid == 112)
+		std::cout << "debug" << std::endl;
+
+
 	if (loopcnt == 1)
 		detecter.topotype = Correct;
 	else
@@ -2105,41 +2400,16 @@ bool NewCluster::ComplexInsert(uint nodeinserted, uint triid, const MyMesh& mesh
 
 	}
 
-
+#ifndef NDEBUG
 	std::cout << " special node insert start" << nodeinserted << std::endl;
 
+
+	std::cout << "原先meshlet的face num " << mymeshlets[nodeinserted].faces.size() << std::endl;
+#endif // !NDEBUG
+
+
+
 	//做一个撕裂者
-
-	//for (auto face : mymeshlets[nodeinserted].faces) {
-	//	auto fh = mesh.face_handle(face);
-
-	//	std::vector<uint> boundnodes;
-	//	std::vector<uint> boundtris;
-
-	//	for (auto cffit = mesh.cff_iter(fh); cffit.is_valid(); ++cffit) {
-	//		auto meshletid = facetomeshlet[cffit->idx()];
-	//		//与之前的要缩小的meshlet相接的边界三角形直接不考虑
-	//		if (nodeoutsets.find(meshletid) != nodeoutsets.end()) {
-	//			boundnodes.clear(); break;
-	//		}
-	//		if (meshletid != nodeinserted) {
-	//			boundnodes.push_back(meshletid);
-	//			boundtris.push_back(cffit->idx());
-	//		}
-	//	}
-
-	//	//try simple insert
-	//	if (boundnodes.size() == 0)continue;
-	//	uint vertoerase = getVerCommon(mesh, boundtris);
-	//	bool result = ComplexInsert(boundnodes[0], face, mesh, facetomeshlet, nodeinserted, vertoerase,nodeoutsets);
-
-	//	if ((mymeshlets[nodeinserted].faces.size() < maxf) && mymeshlets[nodeinserted].vertices.size() <= maxv)
-	//		return true;
-	//}
-
-	
-	std::cout <<"原先meshlet的face num "<< mymeshlets[nodeinserted].faces.size() << std::endl;
-
 	std::unordered_set<uint> newfaceset;
 	std::deque<uint> mytrilist;
 	mytrilist.push_back(triid);
@@ -2221,7 +2491,7 @@ bool NewCluster::ComplexInsert(uint nodeinserted, uint triid, const MyMesh& mesh
 			mymeshlets[mymeshlets.size()-1].vertices.insert(cfvit->idx());
 	}
 
-	std::cout << "分割meshlet的face num " << mymeshlets[nodeinserted].faces.size() <<"  "<<triangleset[0].size() << std::endl;
+	//std::cout << "分割meshlet的face num " << mymeshlets[nodeinserted].faces.size() <<"  "<<triangleset[0].size() << std::endl;
 
 	return true;
 
@@ -2339,8 +2609,6 @@ void NewCluster::EvaluateMeshlet(const MyMesh& mesh)
 		boundrecords.emplace_back(totalbound);
 		auto temp = (totalbound * totalbound / (4 * PI * totalarea) - 1);
 		totalEshape += temp;
-		if (temp > 1000)
-			std::cout << "debug" << std::endl;
 	}
 	std::cout << "total Eshape " << totalEshape << std::endl;
 	//Efit
@@ -2438,12 +2706,18 @@ float NewCluster::calculateTrianglearea(float a, float b, float c)
 
 float NewCluster::ComputeSimulateEnergy(float area, float length, const std::map<uint, Eigen::Vector3d>& positions)
 {
-	float Eshape = (length * length) / (4 * PI * area) - 1;
 	Eigen::Vector3d normal, center;
-	float Efit = 40*FitsquareEnergy(positions, normal, center);
-	float Enum = 10*std::max((float(positions.size()) - maxv) / maxv, 0.0f);
+	float Eshape =( (length * length) / (4 * PI * area) - 1);
+	float Efit = 40*FitsquareEnergy(positions, normal, center)/positions.size() /length;
+	float Enum = std::max((float(positions.size()) - maxv+2), 0.0f);
 
 	return Eshape+ Efit + Enum;
 }
 
+void NewCluster::PrintMeshletInfo(void)
+{
+	for (uint mid = 0; mid < mymeshlets.size(); ++mid) {
+		std::cout << mymeshlets[mid].vertices.size() << "  " << mymeshlets[mid].faces.size() << std::endl;
+	}
+}
 

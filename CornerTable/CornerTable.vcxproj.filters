@@ -69,6 +69,9 @@
     <ClCompile Include="MeshFile.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="VertexEncoder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CornerTable.h">
@@ -113,6 +116,9 @@
     <ClInclude Include="MeshFile.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="VertexEncoder.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="fragshader.glsl">
@@ -155,6 +161,12 @@
       <Filter>shaders\Meshshader</Filter>
     </None>
     <None Include="PointLacewire.glsl">
+      <Filter>shaders\Meshshader</Filter>
+    </None>
+    <None Include="CornerMeshShader.glsl">
+      <Filter>shaders\Meshshader</Filter>
+    </None>
+    <None Include="Cornerpointshader.glsl">
       <Filter>shaders\Meshshader</Filter>
     </None>
   </ItemGroup>

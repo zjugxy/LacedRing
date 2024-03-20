@@ -337,6 +337,30 @@ namespace glfwviewer {
 		 m_scene->renderGPULW();
 	 }
 
+	 void Viewer::RenderCornerLW()
+	 {
+		 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		 m_meshshader.use();
+
+		 m_meshshader.setVec3("viewPos", m_camera.center());
+		 m_meshshader.setVec3("lightPos", m_light.lightpos);
+		 m_meshshader.setVec3("lightColor", m_light.lightcolor);
+
+		 glm::mat4 model = glm::mat4(1.0f);
+		 m_meshshader.setMat4("projection", m_camera.projMatrix());
+		 m_meshshader.setMat4("view", m_camera.viewMatrix());
+		 m_meshshader.setMat4("model", model);
+		 m_meshshader.setVec12("MeshGloData", m_scene->cornerlwobj.meshletglodata);
+
+		 m_meshshader.setVec12("CornerGlodata", m_scene->cornerlwobj.cornerglodata);
+		 m_meshshader.setUintArray3("Cornerxyznum", m_scene->cornerlwobj.cornerxyznum);
+
+		 glPointSize(5.0);
+		 m_scene->renderCornerLW();
+
+	 }
+
 	 void Viewer::RenderFinalLaceWireMesh(std::vector<float>& meshglodata)
 	 {
 		 glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -353,7 +377,7 @@ namespace glfwviewer {
 		 m_meshshader.setMat4("model", model);
 		 m_meshshader.setVec12("MeshGloData",meshglodata);
 
-		 glPointSize(10.0f);
+		 glPointSize(5.0f);
 		 m_scene->renderFinalGPULW();
 	 }
 

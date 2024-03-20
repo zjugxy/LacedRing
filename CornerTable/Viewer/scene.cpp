@@ -616,6 +616,60 @@ namespace glfwviewer {
 
     }
 
+    void Scene::LoadCornerLaceWire(NewLWGenerator& nlwn)
+    {
+        cornerlwobj.DesLoc = &nlwn.cpdata.DesLoc;
+        cornerlwobj.Desinfo = &nlwn.cpdata.DesInfo;
+        cornerlwobj.interwiredata = &nlwn.cpdata.InterWireData;
+        cornerlwobj.exterwiredata = &nlwn.cpdata.ExterWireData;
+        cornerlwobj.cornerdata = &nlwn.cpdata.CornerVertexData;
+
+        cornerlwobj.meshletglodata = nlwn.uniformMeshGlodata;
+
+        cornerlwobj.cornerglodata = std::vector<float>(
+            nlwn.cornerdata.decompress.data(),
+            nlwn.cornerdata.decompress.data()+nlwn.cornerdata.decompress.size()
+        );
+        for (auto elem : nlwn.cornerdata.newcentroid)
+            cornerlwobj.cornerglodata.push_back(elem);
+
+        cornerlwobj.cornerxyznum = std::vector<uint>{
+            nlwn.cornerdata.cornergeo.xnum,
+            nlwn.cornerdata.cornergeo.ynum,
+            nlwn.cornerdata.cornergeo.znum
+        };
+
+        glGenBuffers(1, &cornerlwobj.desloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, cornerlwobj.desloc);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, cornerlwobj.DesLoc->size() * sizeof(uint), cornerlwobj.DesLoc->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, cornerlwobj.desloc);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &cornerlwobj.desinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, cornerlwobj.desinfo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, cornerlwobj.Desinfo->size() * sizeof(uint), cornerlwobj.Desinfo->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, cornerlwobj.desinfo);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &cornerlwobj.interwire);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, cornerlwobj.interwire);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, cornerlwobj.interwiredata->size() * sizeof(uint), cornerlwobj.interwiredata->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, cornerlwobj.interwire);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &cornerlwobj.exterwire);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, cornerlwobj.exterwire);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, cornerlwobj.exterwiredata->size() * sizeof(uint), cornerlwobj.exterwiredata->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, cornerlwobj.exterwire);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        glGenBuffers(1, &cornerlwobj.cornervertex);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, cornerlwobj.cornervertex);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, cornerlwobj.cornerdata->size() * sizeof(uint), cornerlwobj.cornerdata->data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, cornerlwobj.cornervertex);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    }
+
 
     void Scene::renderCT() {
 
@@ -768,6 +822,29 @@ namespace glfwviewer {
         glBeginQuery(GL_TIME_ELAPSED, query);
 
         glDrawMeshTasksNV(0, finalgpulwobj.DesLoc->size());
+
+        glEndQuery(GL_TIME_ELAPSED);
+
+        // 等待查询结果
+        GLuint64 elapsedTime;
+        glGetQueryObjectui64v(query, GL_QUERY_RESULT, &elapsedTime);
+
+        // 删除查询对象
+        glDeleteQueries(1, &query);
+
+        // 输出执行时间
+        std::cout << "glDrawArrays execution time: " << elapsedTime / 1000000.0 << " milliseconds" << std::endl;
+    }
+
+    void Scene::renderCornerLW()
+    {
+        GLuint query;
+        glGenQueries(1, &query);
+
+        // 提交命令之前插入时间戳查询开始
+        glBeginQuery(GL_TIME_ELAPSED, query);
+
+        glDrawMeshTasksNV(0, cornerlwobj.DesLoc->size());
 
         glEndQuery(GL_TIME_ELAPSED);
 

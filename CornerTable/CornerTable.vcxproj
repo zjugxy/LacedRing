@@ -155,6 +155,7 @@
     <ClCompile Include="MyLR.cpp" />
     <ClCompile Include="NewCluster.cpp" />
     <ClCompile Include="NewLWGenerator.cpp" />
+    <ClCompile Include="VertexEncoder.cpp" />
     <ClCompile Include="Viewer\camera.cpp" />
     <ClCompile Include="Viewer\scene.cpp" />
     <ClCompile Include="Viewer\viewer.cpp" />
@@ -170,12 +171,15 @@
     <ClInclude Include="NewCluster.h" />
     <ClInclude Include="NewLWGenerator.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="VertexEncoder.h" />
     <ClInclude Include="Viewer\camera.h" />
     <ClInclude Include="Viewer\scene.h" />
     <ClInclude Include="Viewer\viewer.h" />
     <ClInclude Include="Viewer\viewermath.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="CornerMeshShader.glsl" />
+    <None Include="Cornerpointshader.glsl" />
     <None Include="finallacewiremeshshader.glsl" />
     <None Include="fragshader.glsl" />
     <None Include="geometryshader.glsl" />

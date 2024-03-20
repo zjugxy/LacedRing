@@ -91,7 +91,11 @@ private:
 
 	void FirstDeleteMesh(const MyMesh& mesh);
 
+	void RegularBigMeshlet(const MyMesh& mesh);
+
 	void SimulateAnneal(const MyMesh& mesh,float threshold,float decreaserate,int cntloop);
+
+
 
 	uint CalculateVertexCnt(const MyMesh& mesh, uint vidx,const std::vector<uint>& meshletid);
 
@@ -155,5 +159,8 @@ private:
 	float calculateTrianglearea(float a, float b, float c);
 
 	float ComputeSimulateEnergy(float area, float length,const std::map<uint, Eigen::Vector3d>& positions);
+
+	void PrintMeshletInfo(void);
+
 };
 

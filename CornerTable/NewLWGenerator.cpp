@@ -50,6 +50,8 @@ void NewLWGenerator::FUNC(const MyMesh& mesh,int flag)
 		PackGPULW(mesh);
 	else if (flag == 3)
 		PackFinalLaceWire();
+	else if (flag == 4)
+		PackCornerLaceWire();
 }
 
 void NewLWGenerator::InternalWireGenerator(const MyMesh& mesh)
@@ -631,6 +633,9 @@ Box2d NewLWGenerator::getYZAxis(const MyMesh& mesh, const std::vector<uint>& ver
 	yaxis = cos(finalradian) * starty + sin(finalradian) * startz;
 	zaxis = cos(finalradian) * startz - sin(finalradian) * starty;
 
+	yaxis.normalize();
+	zaxis.normalize();
+
 	return globox;
 }
 
@@ -767,25 +772,16 @@ void NewLWGenerator::NewVertexQuantization(const MyMesh& mesh)
 	}
 	
 
-	//ʹ��8-bit�� eulerxyz --> ӳ�䵽��Ӧ�� 0-2PIֵ��
+
 	UcharRadGen();
-
-	//for (uint eid = 0; eid < gloEwires.size(); ++eid)
-	//	if(packexter[eid].needtransform == true)
-	//		NewSimpleCheck(packexter[eid], mesh, gloEwires[eid].vertex);
-
-	//translationֱ��ȷ����һ�㣬�Ͱ���ԭ���Ľ�������
 	TranslatePack(mesh, MeshTransBox);
-
 	FinalScaleGen(mesh);
 	//pack data to compress;
 	CheckByDequantize(mesh);
+	BitSortGen(60,2,30);
+	VertexBitGen(mesh,0.0001);
 
-
-	BitSortGen(30,2);
-	VertexBitGen(mesh,0.001);
-
-	//pack into bit flow
+	
 
 
 	return;
@@ -964,9 +960,6 @@ void NewLWGenerator::PackFinalLaceWire()
 	//pack inter geo
 	for (uint mid = 0; mid < targets.size(); ++mid) {
 
-		if (mid == 51)
-			std::cout << "debug";
-
 		auto& intermesh = targets[mid].InternalLW;
 		uint vertexnum;
 		if (intermesh.vertex[0] == EMPTYWIRE)
@@ -1121,16 +1114,261 @@ void NewLWGenerator::PackFinalLaceWire()
 	};
 }
 
-void NewLWGenerator::BitSortGen(int highestnum = 30, int minvalue = 2)
+void NewLWGenerator::PackCornerLaceWire()
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dis(0.0, 1.0);
+
+	cpdata.RawDesInfo.resize(targets.size());
+
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+
+		auto& intermesh = targets[mid].InternalLW;
+		uint vertexnum;
+		if (intermesh.vertex[0] == EMPTYWIRE)
+			vertexnum = 0;
+		else
+			vertexnum = intermesh.vertex.size();
+
+		auto& record = cpdata.RawDesInfo[mid];
+		record.ewirenum = static_cast<uchar>(targets[mid].ewireidx.size());
+		record.color[0] = static_cast<uchar>(dis(gen) * 255);
+		record.color[1] = static_cast<uchar>(dis(gen) * 255);
+		record.color[2] = static_cast<uchar>(dis(gen) * 255);
+
+		record.irrnum = static_cast<uchar>(intermesh.irregular.size() / 3);
+		record.numvertex = static_cast<uchar>(internalbuilders[mid].vertices.size());
+		record.numinver = vertexnum;
+		// ingeostart
+		// numexver
+
+		record.interwireloc = cpdata.InterWireData.size();
+
+		assert(intermesh.left.size() == intermesh.vertex.size());
+		assert(intermesh.left.size() == intermesh.right.size());
+
+		if (vertexnum != 0) {
+			auto& tempgeo = packinter[mid];
+			uint pntlength = tempgeo.xnum + tempgeo.ynum + tempgeo.znum;
+
+			std::vector<uint> wirebitflow;
+			wirebitflow.resize(
+				(2 * vertexnum * 8 + record.irrnum * 3 * 8 + 96 + pntlength * vertexnum + 31) / 32
+			);
+			//intermesh 的 con data
+			for (uint idx = 0; idx < intermesh.left.size(); ++idx)
+				InsertConValue(wirebitflow, idx * 8, intermesh.left
+					[idx]);
+			for (uint idx = 0; idx < intermesh.right.size(); ++idx)
+				InsertConValue(wirebitflow, 8 * vertexnum + idx * 8, intermesh.right[idx]);
+			for (uint idx = 0; idx < intermesh.irregular.size(); ++idx) {
+				InsertConValue(wirebitflow, 16 * vertexnum + idx * 8, intermesh.irregular[idx]);
+				assert(intermesh.irregular[idx] < record.numvertex);
+			}
+			assert(intermesh.irregular.size() % 3 == 0);
+			assert(intermesh.left.size() == intermesh.vertex.size());
+			uint geostart = 16 * vertexnum + intermesh.irregular.size() * 8;
+
+			InsertConValue(wirebitflow, geostart + 8 * 0, tempgeo.rotatx);
+			InsertConValue(wirebitflow, geostart + 8 * 1, tempgeo.rotaty);
+			InsertConValue(wirebitflow, geostart + 8 * 2, tempgeo.rotatz);
+
+			InsertConValue(wirebitflow, geostart + 8 * 3, tempgeo.translatex);
+			InsertConValue(wirebitflow, geostart + 8 * 4, tempgeo.translatey);
+			InsertConValue(wirebitflow, geostart + 8 * 5, tempgeo.translatez);
+
+			InsertConValue(wirebitflow, geostart + 8 * 6, tempgeo.scalex);
+			InsertConValue(wirebitflow, geostart + 8 * 7, tempgeo.scaley);
+			InsertConValue(wirebitflow, geostart + 8 * 8, tempgeo.scalez);
+
+			InsertConValue(wirebitflow, geostart + 8 * 9, tempgeo.xnum);
+			InsertConValue(wirebitflow, geostart + 8 * 10, tempgeo.ynum);
+			InsertConValue(wirebitflow, geostart + 8 * 11, tempgeo.znum);
+
+			geostart += 96;
+			uint xnum = tempgeo.xnum;
+			uint ynum = tempgeo.ynum;
+			uint znum = tempgeo.znum;
+			for (auto pnt : tempgeo.datatocompress) {
+				InsertGeoValue(wirebitflow, geostart, xnum, pnt.x());
+				InsertGeoValue(wirebitflow, geostart + xnum, ynum, pnt.y());
+				InsertGeoValue(wirebitflow, geostart + xnum + ynum, znum, pnt.z());
+				geostart += pntlength;
+			}
+
+			for (auto elem : wirebitflow) {
+				cpdata.InterWireData.push_back(elem);
+			}
+		}
+	
+		if (vertexnum == 0) {
+			std::vector<uint> wirebitflow;
+			wirebitflow.resize(
+				( record.irrnum * 3 * 8+ 31) / 32
+			);
+			for (uint idx = 0; idx < intermesh.irregular.size(); ++idx) {
+				InsertConValue(wirebitflow, 16 * vertexnum + idx * 8, intermesh.irregular[idx]);
+				assert(intermesh.irregular[idx] < record.numvertex);
+			}
+			for (auto elem : wirebitflow) {
+				cpdata.InterWireData.push_back(elem);
+			}
+		}
+
+	}
+	//corner data vertex pack
+	std::unordered_map<uint, uint> corner2idx;
+	{
+		auto& tempgeo = cornerdata.cornergeo;
+		uint cxnum =tempgeo.xnum;
+		uint cynum = tempgeo.ynum;
+		uint cznum = tempgeo.znum;
+		uint cornerpntlength = cxnum+cynum+cznum;
+
+		cpdata.CornerVertexData.resize(
+			(cornerpntlength * cornerdata.cornerpntidx.size() + 31) / 32
+		);
+
+		for (uint idx = 0; idx < cornerdata.cornerpntidx.size(); ++idx)
+			corner2idx[cornerdata.cornerpntidx[idx]] = idx;
+		uint locstart = 0;
+		for (uint idx = 0; idx < tempgeo.datatocompress.size(); ++idx) {
+			auto pnt = tempgeo.datatocompress[idx];
+			InsertGeoValue(cpdata.CornerVertexData, locstart, cxnum, pnt.x());
+			InsertGeoValue(cpdata.CornerVertexData, locstart + cxnum, cynum, pnt.y());
+			InsertGeoValue(cpdata.CornerVertexData, locstart + cxnum + cynum, cznum, pnt.z());
+			locstart += cornerpntlength;
+		}
+	}
+
+	std::vector<uint> exterwirelocation;
+	for (uint eid = 0; eid < gloEwires.size(); ++eid) {
+		exterwirelocation.push_back(cpdata.ExterWireData.size());
+
+		const auto& ewirevertex = gloEwires[eid].vertex;
+		const auto& wire = gloEwires[eid];
+		uint firstcorner = gloEwires[eid].vertex.front();
+		uint lastcorner = gloEwires[eid].vertex.back();
+
+		std::vector<uint> wirebitflow;
+		wirebitflow.push_back(corner2idx[firstcorner]);//存储corner vertex data中的位置
+		wirebitflow.push_back(corner2idx[lastcorner]);
+
+		auto& tempgeo = packexter[eid];
+		uint pntlength = tempgeo.xnum + tempgeo.ynum + tempgeo.znum;
+
+		assert(ewirevertex.size() >= 2);
+
+		if (ewirevertex.size() == 2)
+			wirebitflow.resize(
+				(2 * 32 + 2 * ewirevertex.size() * 8 + 31) / 32
+			);
+		else
+			wirebitflow.resize(
+				(2 * 32 + 2 * ewirevertex.size() * 8 + 96 + (ewirevertex.size()-2) * pntlength + 31) / 32
+			);
+
+		for (uint i = 0; i < wire.left.size(); i++)
+			InsertConValue(wirebitflow, 2 * 32 + i * 8, gloEwires[eid].left[i]);
+		for (uint i = 0; i < wire.right.size(); ++i)
+			InsertConValue(wirebitflow, 2 * 32 + 8 * wire.left.size() + i * 8, wire.right[wire.right.size() - i - 1]);
+	
+		if (ewirevertex.size() > 2) {
+			uint geostart = 2 * 32 + 16 * wire.left.size();
+
+			InsertConValue(wirebitflow, geostart + 8 * 0, tempgeo.rotatx);
+			InsertConValue(wirebitflow, geostart + 8 * 1, tempgeo.rotaty);
+			InsertConValue(wirebitflow, geostart + 8 * 2, tempgeo.rotatz);
+
+			InsertConValue(wirebitflow, geostart + 8 * 3, tempgeo.translatex);
+			InsertConValue(wirebitflow, geostart + 8 * 4, tempgeo.translatey);
+			InsertConValue(wirebitflow, geostart + 8 * 5, tempgeo.translatez);
+
+			InsertConValue(wirebitflow, geostart + 8 * 6, tempgeo.scalex);
+			InsertConValue(wirebitflow, geostart + 8 * 7, tempgeo.scaley);
+			InsertConValue(wirebitflow, geostart + 8 * 8, tempgeo.scalez);
+
+			InsertConValue(wirebitflow, geostart + 8 * 9, tempgeo.xnum);
+			InsertConValue(wirebitflow, geostart + 8 * 10, tempgeo.ynum);
+			InsertConValue(wirebitflow, geostart + 8 * 11, tempgeo.znum);
+		
+			geostart += 96;
+			uint xnum = tempgeo.xnum;
+			uint ynum = tempgeo.ynum;
+			uint znum = tempgeo.znum;
+			for(int vidx = 1;vidx<tempgeo.datatocompress.size()-1;vidx++){
+				auto& pnt = tempgeo.datatocompress[vidx];
+				InsertGeoValue(wirebitflow, geostart, xnum, pnt.x());
+				InsertGeoValue(wirebitflow, geostart + xnum, ynum, pnt.y());
+				InsertGeoValue(wirebitflow, geostart + xnum + ynum, znum, pnt.z());
+				geostart += pntlength;
+			}
+		}
+	
+		for (auto elem : wirebitflow) {
+			cpdata.ExterWireData.push_back(elem);
+		}
+	}
+
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		int cnt = 0;
+		auto& record = cpdata.RawDesInfo[mid];
+		for (auto& id : targets[mid].ewireidx) {
+			uchar num = static_cast<uchar>(gloEwires[id].vertex.size());
+			assert(num < 32);
+			if (targets[mid].reverse[cnt] == true)
+				num = num | 0x80;
+			record.numexver.push_back(num);
+			record.exterwireloc.push_back(exterwirelocation[id]);
+			cnt++;
+		}
+
+		assert(targets[mid].ewireidx.size() <= 14);
+	}
+
+	for (uint mid = 0; mid < targets.size(); ++mid) {
+		cpdata.DesLoc.push_back(cpdata.DesInfo.size());
+		auto& record = cpdata.RawDesInfo[mid];
+		while (record.numexver.size() % 4 != 0)
+			record.numexver.push_back(0);
+
+		record.ingeostart = static_cast<uchar>(2 + record.numexver.size() / 4);
+
+		cpdata.DesInfo.push_back(LowPackChar4Uint(record.ewirenum, record.color[0], record.color[1], record.color[2]));
+		cpdata.DesInfo.push_back(LowPackChar4Uint(record.irrnum, record.numvertex,
+			record.numinver, record.ingeostart));
+	
+		for (int i = 0; i < record.numexver.size(); i += 4) 
+			cpdata.DesInfo.push_back(LowPackChar4Uint(record.numexver[i], record.numexver[i + 1],
+				record.numexver[i + 2], record.numexver[i + 3]));
+
+		cpdata.DesInfo.push_back(record.interwireloc);
+		for (auto elem : record.exterwireloc)
+			cpdata.DesInfo.push_back(elem);
+	}
+
+	uniformMeshGlodata = std::vector<float>{
+		MeshTransBox.minx,MeshTransBox.maxx - MeshTransBox.minx,
+		MeshTransBox.miny,MeshTransBox.maxy - MeshTransBox.miny,
+		MeshTransBox.minz,MeshTransBox.maxz - MeshTransBox.minz,
+		MeshScaleBox.minx,MeshScaleBox.maxx / MeshScaleBox.minx,
+		MeshScaleBox.miny,MeshScaleBox.maxy / MeshScaleBox.miny,
+		MeshScaleBox.minz,MeshScaleBox.maxz / MeshScaleBox.minz
+	};
+}
+
+void NewLWGenerator::BitSortGen(int highestnum = 30, int minvalue = 2,int highvalue = 30)
 {
 	for (int i = minvalue*3; i < highestnum; ++i) {
 
-		for (int a = minvalue; a < i; ++a)
-			for (int b = minvalue; b < i - a; ++b) {
+		for (int a = minvalue; a < i && a<=highvalue; ++a)
+			for (int b = minvalue; b < i - a && b <= highvalue; ++b) {
 				int c = i - a - b;
 				if (c < minvalue)continue;
+				if (c > highvalue)continue;
 				std::vector<int> temp{ a,b,c };
-				bitnums.push_back(temp);
+				bitnums.push_back(std::move(temp));
 			}
 
 	}
@@ -1294,6 +1532,9 @@ void NewLWGenerator::VertexBitGen(const MyMesh& mesh,float errorpercent)
 #endif // !NDEBUG
 	}
 
+
+	CornerBitGen(mesh, xerror, yerror, zerror);
+
 	return;
 }
 
@@ -1319,6 +1560,15 @@ uint NewLWGenerator::PackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3) {
 		(static_cast<uint32_t>(c1) << 16) |
 		(static_cast<uint32_t>(c2) << 8) |
 		static_cast<uint32_t>(c3);
+	return reinterpret_cast<uint&>(packedValue);
+}
+
+uint NewLWGenerator::LowPackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3)
+{
+	uint32_t packedValue = (static_cast<uint32_t>(c0)) |
+		(static_cast<uint32_t>(c1) << 8) |
+		(static_cast<uint32_t>(c2) << 16) |
+		(static_cast<uint32_t>(c3) << 24);
 	return reinterpret_cast<uint&>(packedValue);
 }
 
@@ -1737,11 +1987,6 @@ void NewLWGenerator::LimitEigen(Eigen::Vector3d& vec)
 	if (vec.z() > 1.0)vec.z() = 1.0;
 }
 
-// float*3 �ڸþ���֮�¾������ʲôֵ
-// -1.0 --> 1.0  map to  0 --> 2^num-1
-// 0.0 --> 2.0 map to  0 --> 2^num-1
-
-
 
 Eigen::Vector3d NewLWGenerator::cutfloatByBit(Eigen::Vector3d rawvalue, uint xnum, uint ynum, uint znum)
 {
@@ -1795,15 +2040,6 @@ void NewLWGenerator::GEObitflowPack()
 		//<3
 		if (tempgeo.needtransform == false) {
 			assert(targets[iid].InternalLW.vertex[0]==EMPTYWIRE);
-
-			//for (auto pnt : tempgeo.nopackgeo) {
-			//	uint uintvalue = *reinterpret_cast<uint*>(&pnt.x);
-			//	tempgeo.geobitflow.push_back(uintvalue);
-			//	uintvalue = *reinterpret_cast<uint*>(&pnt.y);
-			//	tempgeo.geobitflow.push_back(uintvalue);
-			//	uintvalue = *reinterpret_cast<uint*>(&pnt.z);
-			//	tempgeo.geobitflow.push_back(uintvalue);
-			//}
 		}
 		else {
 			tempgeo.geobitflow.push_back(PackChar4Uint(tempgeo.rotatx, tempgeo.rotaty, tempgeo.rotatz, tempgeo.translatex));
@@ -1825,22 +2061,9 @@ void NewLWGenerator::GEObitflowPack()
 
 	}
 
-	int lacewirecnt = packinter.size() + packexter.size();
-	uint xcnt = 0, ycnt = 0, zcnt = 0;
+	//corner point pack;
 
-	for (auto pack : packinter) {
-		xcnt += pack.xnum;
-		ycnt += pack.ynum;
-		zcnt += pack.znum;
-	}
-	
-	for (auto pack : packexter) {
-		xcnt += pack.xnum;
-		ycnt += pack.ynum;
-		zcnt += pack.znum;
-	}
 
-	std::cout << float(xcnt) / lacewirecnt << " " << float(ycnt) / lacewirecnt << " " << float(zcnt) / lacewirecnt << " " << std::endl;
 
 }
 
@@ -1877,6 +2100,16 @@ void NewLWGenerator::InsertGeoValue(std::vector<uint>& bitflow, uint startidx, u
 		//printBits(bitflow[startidx / 32+1]);
 
 	}
+
+}
+//这里改成了低位到高位的情况
+void NewLWGenerator::InsertConValue(std::vector<uint>& bitflow, uint startidx, uint elem)
+{
+	uint start = startidx / 32;
+	auto& value = bitflow[start];
+	uint offset = startidx % 32;
+	assert(elem <= 0xff);
+	value = value | (elem << offset);
 
 }
 
@@ -2161,5 +2394,115 @@ void NewLWGenerator::ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequa
 	scalema.diagonal() << descalex, descaley, descalez;
 
 	dequanmatrix = rotationMatrix * scalema;
+
+}
+
+void NewLWGenerator::CornerBitGen(const MyMesh& mesh, float xerror, float yerror, float zerror)
+{
+	std::unordered_set<uint> cornersets;
+
+	for (auto eid = 0; eid < gloEwires.size(); ++eid) {
+		cornersets.insert(gloEwires[eid].vertex.front());
+		cornersets.insert(gloEwires[eid].vertex.back());
+	}
+
+	std::vector<uint> cornervecs;
+	for (auto elem : cornersets)
+		cornervecs.push_back(elem);
+	cornersets.clear();
+
+	Eigen::Vector3d centroid, normal,newcentroid;
+	Eigen::Vector3d finalyaxis, finalzaxis;
+	Box2d globox;
+	UnitBox scalebox;
+
+	fitPlane(mesh, cornervecs, centroid, normal);
+	globox = getYZAxis(mesh, cornervecs, normal, finalyaxis, finalzaxis, 10.0 / 180.0 * PI, centroid);
+	newcentroid = centroid 
+		+ (globox.maxy + globox.miny) / 2.0f * finalyaxis 
+		+ (globox.maxz + globox.minz) / 2.0f * finalzaxis;
+	
+	finalyaxis.normalize();
+	finalzaxis.normalize();
+	normal.normalize();
+	getScaleBox(mesh, cornervecs, newcentroid, scalebox, normal, finalyaxis, finalzaxis);
+
+	Eigen::Matrix3d rotationmatrix;
+
+	rotationmatrix << normal, finalyaxis, finalzaxis;
+
+	Eigen::DiagonalMatrix<double, 3> scalema,descale;
+	//修正
+	scalebox.maxx *= 1.001;
+	scalebox.maxy *= 1.001;
+	scalebox.maxz *= 1.001;
+
+	scalema.diagonal() << 1.0/scalebox.maxx, 1.0/scalebox.maxy, 1.0/scalebox.maxz;
+	descale.diagonal() << scalebox.maxx, scalebox.maxy, scalebox.maxz;
+	// scalema * Projectionmatrix ( rawdata - newcentroid)
+	Eigen::MatrixXd compressmatrix = scalema * rotationmatrix.transpose();
+	Eigen::MatrixXd decompress = rotationmatrix * descale;
+	std::vector<Eigen::Vector3d> compressdata;
+	std::vector<Eigen::Vector3d> rawdatavec;
+
+	for (auto v : cornervecs) {
+		auto pnt = mesh.point(mesh.vertex_handle(v));
+		Eigen::Vector3d data{ pnt[0],pnt[1],pnt[2] };
+		Eigen::Vector3d result = compressmatrix * (data - newcentroid);
+		LimitEigen(result);
+		compressdata.push_back(result);
+		rawdatavec.push_back(std::move(data));
+	}
+
+#ifndef NDEBUG
+	for (uint vid = 0; vid < compressdata.size(); vid++) {
+		auto pnt = mesh.point(mesh.vertex_handle(cornervecs[vid]));
+		Eigen::Vector3d data{ pnt[0],pnt[1],pnt[2] };
+
+		Eigen::Vector3d cmpdata = decompress * compressdata[vid] + newcentroid;
+		std::cout << (data - cmpdata).norm() << std::endl;
+	}
+#endif // !NDEBUG
+
+	std::cout << "corner compress done" << std::endl;
+
+	//find compressdata --> xnum ynum znum
+
+
+	for (int type3 = 0; type3 < bitnums.size(); ++type3) {
+		int xnum = bitnums[type3][0];
+		int ynum = bitnums[type3][1];
+		int znum = bitnums[type3][2];
+
+		bool flag = true;
+
+		for (uint vid = 0; vid < cornervecs.size(); ++vid) {
+			Eigen::Vector3d rawdata = rawdatavec[vid];
+			Eigen::Vector3d tempdata = cutfloatByBit(compressdata[vid], xnum, ynum, znum);
+			Eigen::Vector3d cmpdata = decompress * tempdata + newcentroid;
+			if ((abs(cmpdata.x() - rawdata.x()) > xerror) || (abs(cmpdata.y() - rawdata.y()) > yerror) || (abs(cmpdata.z() - rawdata.z()) > zerror)) {
+				flag = false; break;
+			}
+		}
+
+		if (flag == true) {
+			cornerdata.cornergeo.xnum = xnum;
+			cornerdata.cornergeo.ynum = ynum;
+			cornerdata.cornergeo.znum = znum;
+			break;
+		}
+		assert(type3 < (bitnums.size() - 1) && "error in vertex bit gen");
+	}
+	//cornerdata xyznum已经pack好了
+	cornerdata.cornergeo.datatocompress = std::move(compressdata);
+	cornerdata.cornerpntidx = std::move(cornervecs);
+	cornerdata.decompress = decompress;
+	cornerdata.newcentroid = newcentroid;
+
+	//Eigen和glm的矩阵都是列优先的
+	//std::vector<float> test(decompress.data(), decompress.data()+ decompress.size());
+	//for (auto elem : test)
+	//	std::cout << elem << std::endl;
+	//std::cout << decompress;
 
 }

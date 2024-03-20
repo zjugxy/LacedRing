@@ -48,6 +48,7 @@ namespace glfwviewer {
 		virtual void RenderSCML();
 		virtual void RenderSWML();
 		virtual void RenderFINALLWML();
+		virtual void RenderCornerLW();
 
 		virtual void RenderFinalLaceWireMesh(std::vector<float>& meshglodata);
 

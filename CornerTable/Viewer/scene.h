@@ -175,6 +175,21 @@ namespace glfwviewer {
 			FinalLWextercon, FinalLWintergeo, FinalLWextergeo;
 	};
 
+	struct SceneCornerLW {
+		const std::vector<uint>* DesLoc;
+		const std::vector<uint>* Desinfo;
+
+		const std::vector<uint>* interwiredata;//inter: left,right,irregular
+		const std::vector<uint>* exterwiredata;//exter: left,right
+		const std::vector<uint>* cornerdata;
+
+		std::vector<float> meshletglodata;
+		std::vector<float> cornerglodata;
+		std::vector<uint> cornerxyznum;
+
+		GLuint desloc, desinfo, interwire, exterwire, cornervertex;
+	};
+
 
 	struct SceneRenderNormal {
 		std::vector<vec3> linepoints;
@@ -212,6 +227,8 @@ namespace glfwviewer {
 		SceneRenderSimpleWire swobj;
 		SceneGPULW gpulwobj;
 		SceneFinalGPULW finalgpulwobj;
+		SceneCornerLW cornerlwobj;
+
 		SceneRenderNormal normalobj;
 		SceneRenderPoint pointobj;
 
@@ -260,6 +277,8 @@ namespace glfwviewer {
 		void LoadGPULW(NewLWGenerator& nlwn);
 		void LoadGPULW(MeshFile& meshfile);
 		void LoadFinalLaceWire(NewLWGenerator& nlwn);
+		void LoadCornerLaceWire(NewLWGenerator& nlwn);
+
 
 		void renderTSML();
 		void renderIXML();
@@ -267,6 +286,7 @@ namespace glfwviewer {
 		void renderSWML();
 		void renderGPULW();
 		void renderFinalGPULW();
+		void renderCornerLW();
 	};
 
 }

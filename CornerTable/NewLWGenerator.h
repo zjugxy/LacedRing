@@ -49,6 +49,22 @@ struct MeshletDes
 	std::vector<uint> exconlocation;
 };
 
+struct CornerMeshletDes {
+	//32bit
+	uchar ewirenum;
+	uchar color[3];
+	//32bit
+	uchar irrnum;
+	uchar numvertex;
+	uchar numinver;
+	uchar ingeostart;
+	// (numexver+3)/4*32bit
+	std::vector<uchar> numexver;
+	//32 + ewirenum*32 bit
+	uint interwireloc;
+	std::vector<uint> exterwireloc;
+};
+
 
 struct Box2d {
 	float miny = 0;
@@ -100,6 +116,24 @@ struct PackGEO {
 	std::vector<uint> geobitflow;
 };
 
+struct CornerData {
+	PackGEO cornergeo;
+	std::vector<uint> cornerpntidx;
+	Eigen::MatrixXd decompress;
+	Eigen::Vector3d newcentroid;
+};
+
+struct CornerLaceWirePackData
+{
+	std::vector<CornerMeshletDes> RawDesInfo;
+	std::vector<uint> DesLoc;
+	std::vector<uint> DesInfo;
+	std::vector<uint> InterWireData;
+	std::vector<uint> ExterWireData;
+	std::vector<uint> CornerVertexData;
+};
+
+
 
 class NewLWGenerator
 {
@@ -109,6 +143,7 @@ public:
 	std::vector<LWMeshlet> targets;
 	uint nummeshlet;
 	std::vector<std::unordered_map<uint, uchar>> vidxmaps;
+	std::vector<vec3> debugpnts;
 
 	//simple lw
 	std::vector<Simple_meshlet> simplemeshlets;
@@ -117,28 +152,27 @@ public:
 	// gpu lw
 	std::vector<uint> DesLoc;
 	std::vector<uint> Desinfo;
-
 	std::vector<uint> newintercon;
 	std::vector<uint> newextercon;
 	std::vector<uchar> intercon;//inter: left,right,irregular
 	std::vector<uchar> extercon;//exter: left,right
 	std::vector<float> intergeo;
 	std::vector<float> extergeo;
-
+	// final new lwgeo
 	std::vector<uint> finalintergeo;
 	std::vector<uint> finalextergeo;
-
 	std::vector<PackGEO> packexter;
 	std::vector<PackGEO> packinter;
 	UnitBox MeshTransBox;
 	UnitBox MeshScaleBox;
-
-
-	std::vector<vec3> debugpnts;
+	std::vector<float> uniformMeshGlodata;
 
 
 	std::vector<std::vector<int>> bitnums;
-	std::vector<float> uniformMeshGlodata;
+
+	//PackCornerLaceWire
+	CornerData cornerdata;
+	CornerLaceWirePackData cpdata;
 
 public:
 	NewLWGenerator(const NewCluster& nclu);
@@ -172,12 +206,16 @@ private:
 
 	void PackFinalLaceWire();
 
-	void BitSortGen(int highestnum,int minvalue);
+	void PackCornerLaceWire();
+
+	void BitSortGen(int highestnum,int minvalue,int highvalue);
 	void VertexBitGen(const MyMesh& mesh,float errorpercent);
 
 	std::array<uchar, 4> DiscomposeUint(uint value);
 	float PackChar4Float(uchar c0, uchar c1, uchar c2, uchar c3);
 	uint PackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3);
+	uint LowPackChar4Uint(uchar c0, uchar c1, uchar c2, uchar c3);
+
 	void getStartAxis(Eigen::Vector3d& yaxis, Eigen::Vector3d& zaxis, const Eigen::Vector3d& normal);
 
 	void NewSimpleCheck(PackGEO& tempgeo, const MyMesh& mesh, const std::vector<uint>& verset);
@@ -199,6 +237,8 @@ private:
 	void GEObitflowPack();
 
 	void InsertGeoValue(std::vector<uint>& bitflow, uint startidx, uint length, float rawvalue);
+	//д╛хо8bit
+	void InsertConValue(std::vector<uint>& bitflow, uint startidx, uint elem);
 
 	void printBits(uint32_t value);
 
@@ -210,5 +250,9 @@ private:
 
 
 	void ParseTempGeo(const PackGEO& tempgeo, Eigen::MatrixXd& dequanmatrix, Eigen::Vector3d& tranvec);
+
+	//locate in vertex bit gen
+	void CornerBitGen(const MyMesh& mesh,float xerror,float yerror,float zerror);
+	
 };
 
